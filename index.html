@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>PvP 프로토타입 — 조작감 테스트</title>
+<title>PROJECT: ARENA</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
@@ -318,18 +318,52 @@
     border-color: var(--panel-border);
     color: var(--text-dim);
   }
+
+  /* --- 언어 전환 버튼 --- */
+  #langSwitch {
+    position: fixed;
+    top: 20px; right: 24px;
+    display: flex;
+    gap: 6px;
+    z-index: 200;
+    pointer-events: all;
+  }
+  .lang-btn {
+    pointer-events: all;
+    background: transparent;
+    border: 2px solid var(--panel-border);
+    color: var(--text-dim);
+    padding: 6px 14px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .lang-btn:hover { border-color: var(--text-primary); color: var(--text-primary); }
+  .lang-btn.active {
+    border-color: var(--accent-player);
+    color: var(--accent-player);
+    box-shadow: 0 0 10px var(--accent-player-glow);
+  }
 </style>
 </head>
 <body>
 
+<div id="langSwitch">
+  <button class="lang-btn" id="langKoBtn" data-lang="ko">한국어</button>
+  <button class="lang-btn" id="langEnBtn" data-lang="en">EN</button>
+</div>
+
 <div class="overlay-screen" id="screenMain">
-  <div class="lobby-title">PVP PROTOTYPE</div>
-  <div class="lobby-sub">원거리 기본공격 · 스킬 기반</div>
+  <div class="lobby-title">PROJECT: ARENA</div>
+  <div class="lobby-sub" id="lobbySub">원거리 기본공격 · 스킬 기반</div>
   <div class="btn-row">
     <button class="action-btn primary" id="mainStartBtn">전투 시작</button>
     <button class="action-btn secondary" id="mainSettingsBtn">설정</button>
   </div>
-  <div class="lobby-controls">
+  <div class="lobby-controls" id="lobbyControls">
     WASD 이동 &nbsp;·&nbsp; 마우스 조준 &nbsp;·&nbsp; 좌클릭 기본공격<br>
     Q 대시(에임 방향) &nbsp;·&nbsp; E 홀드로 파열구 범위 표시 → 떼면 발동<br>
     ESC 일시 정지
@@ -337,18 +371,18 @@
 </div>
 
 <div class="overlay-screen hidden" id="screenSettings">
-  <div class="lobby-title" style="font-size:38px; letter-spacing:6px;">SETTINGS</div>
-  <div class="lobby-sub">게임 설정을 변경할 수 있습니다</div>
+  <div class="lobby-title" style="font-size:38px; letter-spacing:6px;" id="settingsTitle">SETTINGS</div>
+  <div class="lobby-sub" id="settingsSub">게임 설정을 변경할 수 있습니다</div>
   <div class="setting-item">
-    <span class="setting-label">대미지 표시</span>
+    <span class="setting-label" id="damageTextLabel">대미지 표시</span>
     <button class="setting-toggle-btn" id="toggleDamageTextBtn">ON</button>
   </div>
   <button class="action-btn secondary" id="closeSettingsBtn">닫기</button>
 </div>
 
 <div class="overlay-screen hidden" id="screenDifficulty">
-  <div class="lobby-title" style="font-size:38px; letter-spacing:6px;">난이도 선택</div>
-  <div class="lobby-sub">상대의 속도 · 공격 빈도 · 스킬 사용을 결정해요</div>
+  <div class="lobby-title" style="font-size:38px; letter-spacing:6px;" id="diffTitle">난이도 선택</div>
+  <div class="lobby-sub" id="diffSub">상대의 속도 · 공격 빈도 · 스킬 사용을 결정해요</div>
   <div class="difficulty-select" id="difficultySelect">
     <button class="diff-btn easy" data-diff="easy">쉬움</button>
     <button class="diff-btn normal active" data-diff="normal">보통</button>
@@ -359,8 +393,8 @@
 </div>
 
 <div class="overlay-screen hidden" id="screenPause">
-  <div class="lobby-title" style="font-size:38px; letter-spacing:6px;">PAUSED</div>
-  <div class="lobby-sub">게임이 일시 정지되었습니다</div>
+  <div class="lobby-title" style="font-size:38px; letter-spacing:6px;" id="pausedTitle">PAUSED</div>
+  <div class="lobby-sub" id="pausedSub">게임이 일시 정지되었습니다</div>
   <div class="btn-row">
     <button class="action-btn primary" id="resumeBtn">게임 계속하기</button>
     <button class="action-btn secondary" id="pauseToLobbyBtn">로비로 돌아가기</button>
@@ -398,7 +432,7 @@
 </div>
 
 <div class="hud" id="hint">
-  WASD 이동 &nbsp;·&nbsp; 마우스 조준 &nbsp;·&nbsp; 좌클릭 기본공격 &nbsp;·&nbsp; Q 대시 &nbsp;·&nbsp; E 파열구 &nbsp;·&nbsp; ESC 일시 정지
+  <span id="hudHint">WASD 이동 &nbsp;·&nbsp; 마우스 조준 &nbsp;·&nbsp; 좌클릭 기본공격 &nbsp;·&nbsp; Q 대시 &nbsp;·&nbsp; E 파열구 &nbsp;·&nbsp; ESC 일시 정지</span>
 </div>
 
 <div class="hud" id="status"></div>
@@ -406,17 +440,17 @@
 <div class="hud" id="skillbar">
   <div class="skill-slot" id="slotBasic">
     <div class="key">LMB</div>
-    <div class="label">공격</div>
+    <div class="label" id="labelBasic">공격</div>
     <div class="cooldown-overlay" id="cdBasic" style="height:0%"></div>
   </div>
   <div class="skill-slot" id="slotQ">
     <div class="key">Q</div>
-    <div class="label">대시</div>
+    <div class="label" id="labelQ">대시</div>
     <div class="cooldown-overlay" id="cdQ" style="height:0%"></div>
   </div>
   <div class="skill-slot" id="slotE">
     <div class="key">E</div>
-    <div class="label">파열구</div>
+    <div class="label" id="labelE">파열구</div>
     <div class="cooldown-overlay" id="cdE" style="height:0%"></div>
   </div>
 </div>
@@ -492,6 +526,134 @@ const SLOW_FACTOR = 0.45;
 
 // 설정 옵션 상태
 let showDamageText = true;
+
+// ---------- 언어(i18n) ----------
+const I18N = {
+  ko: {
+    lobbySub: '원거리 기본공격 · 스킬 기반',
+    startBtn: '전투 시작',
+    settingsBtn: '설정',
+    lobbyControls: 'WASD 이동 &nbsp;·&nbsp; 마우스 조준 &nbsp;·&nbsp; 좌클릭 기본공격<br>Q 대시(에임 방향) &nbsp;·&nbsp; E 홀드로 파열구 범위 표시 → 떼면 발동<br>ESC 일시 정지',
+    settingsTitle: 'SETTINGS',
+    settingsSub: '게임 설정을 변경할 수 있습니다',
+    damageTextLabel: '대미지 표시',
+    toggleOn: 'ON',
+    toggleOff: 'OFF',
+    closeBtn: '닫기',
+    diffTitle: '난이도 선택',
+    diffSub: '상대의 속도 · 공격 빈도 · 스킬 사용을 결정해요',
+    diffEasy: '쉬움',
+    diffNormal: '보통',
+    diffHard: '어려움',
+    diffNightmare: '악몽',
+    pausedTitle: 'PAUSED',
+    pausedSub: '게임이 일시 정지되었습니다',
+    resumeBtn: '게임 계속하기',
+    pauseToLobbyBtn: '로비로 돌아가기',
+    retryBtn: '다시하기',
+    toLobbyBtn: '로비로 돌아가기',
+    hudHint: 'WASD 이동 &nbsp;·&nbsp; 마우스 조준 &nbsp;·&nbsp; 좌클릭 기본공격 &nbsp;·&nbsp; Q 대시 &nbsp;·&nbsp; E 파열구 &nbsp;·&nbsp; ESC 일시 정지',
+    skillAttack: '공격',
+    skillDash: '대시',
+    skillBurst: '파열구',
+    resultVictoryTitle: 'VICTORY',
+    resultDefeatTitle: 'DEFEAT',
+    resultVictoryText: '승리했습니다',
+    resultDefeatText: '패배했습니다',
+    statusVictory: 'VICTORY',
+    statusDefeat: 'DEFEAT'
+  },
+  en: {
+    lobbySub: 'Ranged Basic Attack · Skill-Based',
+    startBtn: 'START BATTLE',
+    settingsBtn: 'SETTINGS',
+    lobbyControls: 'WASD Move &nbsp;·&nbsp; Mouse Aim &nbsp;·&nbsp; Left Click Basic Attack<br>Q Dash (aim direction) &nbsp;·&nbsp; Hold E to show burst radius → release to cast<br>ESC Pause',
+    settingsTitle: 'SETTINGS',
+    settingsSub: 'Change your game settings',
+    damageTextLabel: 'Damage Numbers',
+    toggleOn: 'ON',
+    toggleOff: 'OFF',
+    closeBtn: 'Close',
+    diffTitle: 'SELECT DIFFICULTY',
+    diffSub: "Determines the opponent's speed, attack frequency, and skill usage",
+    diffEasy: 'EASY',
+    diffNormal: 'NORMAL',
+    diffHard: 'HARD',
+    diffNightmare: 'NIGHTMARE',
+    pausedTitle: 'PAUSED',
+    pausedSub: 'The game is paused',
+    resumeBtn: 'RESUME',
+    pauseToLobbyBtn: 'RETURN TO LOBBY',
+    retryBtn: 'RETRY',
+    toLobbyBtn: 'RETURN TO LOBBY',
+    hudHint: 'WASD Move &nbsp;·&nbsp; Mouse Aim &nbsp;·&nbsp; LMB Attack &nbsp;·&nbsp; Q Dash &nbsp;·&nbsp; E Burst &nbsp;·&nbsp; ESC Pause',
+    skillAttack: 'ATTACK',
+    skillDash: 'DASH',
+    skillBurst: 'BURST',
+    resultVictoryTitle: 'VICTORY',
+    resultDefeatTitle: 'DEFEAT',
+    resultVictoryText: 'You Won',
+    resultDefeatText: 'You Lost',
+    statusVictory: 'VICTORY',
+    statusDefeat: 'DEFEAT'
+  }
+};
+
+let currentLang = localStorage.getItem('pvpProtoLang') || 'ko';
+let lastResultKind = null; // 'win' | 'lose' | null, 결과 화면 언어 재적용용
+
+function applyLanguage(lang) {
+  currentLang = lang;
+  localStorage.setItem('pvpProtoLang', lang);
+  const t = I18N[lang];
+
+  document.getElementById('lobbySub').textContent = t.lobbySub;
+  document.getElementById('mainStartBtn').textContent = t.startBtn;
+  document.getElementById('mainSettingsBtn').textContent = t.settingsBtn;
+  document.getElementById('lobbyControls').innerHTML = t.lobbyControls;
+
+  document.getElementById('settingsTitle').textContent = t.settingsTitle;
+  document.getElementById('settingsSub').textContent = t.settingsSub;
+  document.getElementById('damageTextLabel').textContent = t.damageTextLabel;
+  toggleDamageTextBtn.textContent = showDamageText ? t.toggleOn : t.toggleOff;
+  document.getElementById('closeSettingsBtn').textContent = t.closeBtn;
+
+  document.getElementById('diffTitle').textContent = t.diffTitle;
+  document.getElementById('diffSub').textContent = t.diffSub;
+  document.querySelector('.diff-btn.easy').textContent = t.diffEasy;
+  document.querySelector('.diff-btn.normal').textContent = t.diffNormal;
+  document.querySelector('.diff-btn.hard').textContent = t.diffHard;
+  document.querySelector('.diff-btn.nightmare').textContent = t.diffNightmare;
+  document.getElementById('confirmStartBtn').textContent = t.startBtn;
+
+  document.getElementById('pausedTitle').textContent = t.pausedTitle;
+  document.getElementById('pausedSub').textContent = t.pausedSub;
+  document.getElementById('resumeBtn').textContent = t.resumeBtn;
+  document.getElementById('pauseToLobbyBtn').textContent = t.pauseToLobbyBtn;
+
+  document.getElementById('retryBtn').textContent = t.retryBtn;
+  document.getElementById('toLobbyBtn').textContent = t.toLobbyBtn;
+
+  document.getElementById('hudHint').innerHTML = t.hudHint;
+  document.getElementById('labelBasic').textContent = t.skillAttack;
+  document.getElementById('labelQ').textContent = t.skillDash;
+  document.getElementById('labelE').textContent = t.skillBurst;
+
+  if (lastResultKind === 'win') {
+    resultTitleEl.textContent = t.resultVictoryTitle;
+    resultTextEl.textContent = t.resultVictoryText;
+  } else if (lastResultKind === 'lose') {
+    resultTitleEl.textContent = t.resultDefeatTitle;
+    resultTextEl.textContent = t.resultDefeatText;
+  }
+
+  document.getElementById('langKoBtn').classList.toggle('active', lang === 'ko');
+  document.getElementById('langEnBtn').classList.toggle('active', lang === 'en');
+  document.documentElement.lang = lang;
+}
+
+document.getElementById('langKoBtn').addEventListener('click', () => applyLanguage('ko'));
+document.getElementById('langEnBtn').addEventListener('click', () => applyLanguage('en'));
 
 const DIFFICULTY = {
   easy:      { speedMult: 0.85, shootMin: 1.5,  shootMax: 2.1,  dmgMult: 0.8,  qCooldown: 6.5, eCooldown: 11,  homing: 0.6 },
@@ -576,11 +738,12 @@ document.getElementById('closeSettingsBtn').addEventListener('click', () => {
 const toggleDamageTextBtn = document.getElementById('toggleDamageTextBtn');
 toggleDamageTextBtn.addEventListener('click', () => {
   showDamageText = !showDamageText;
+  const t = I18N[currentLang];
   if (showDamageText) {
-    toggleDamageTextBtn.textContent = 'ON';
+    toggleDamageTextBtn.textContent = t.toggleOn;
     toggleDamageTextBtn.classList.remove('off');
   } else {
-    toggleDamageTextBtn.textContent = 'OFF';
+    toggleDamageTextBtn.textContent = t.toggleOff;
     toggleDamageTextBtn.classList.add('off');
   }
 });
@@ -732,11 +895,13 @@ function applyDamage(target, dmg, sourceOwner) {
     spawnDeathParticles(target.x, target.y, target.color);
 
     if (sourceOwner === 'player') {
-      showStatus('VICTORY', '#4fd6c4');
-      setTimeout(() => showResultScreen('VICTORY', '승리했습니다', 'win'), 1400);
+      lastResultKind = 'win';
+      showStatus(I18N[currentLang].statusVictory, '#4fd6c4');
+      setTimeout(() => showResultScreen(I18N[currentLang].resultVictoryTitle, I18N[currentLang].resultVictoryText, 'win'), 1400);
     } else {
-      showStatus('DEFEAT', '#e0554f');
-      setTimeout(() => showResultScreen('DEFEAT', '패배했습니다', 'lose'), 1400);
+      lastResultKind = 'lose';
+      showStatus(I18N[currentLang].statusDefeat, '#e0554f');
+      setTimeout(() => showResultScreen(I18N[currentLang].resultDefeatTitle, I18N[currentLang].resultDefeatText, 'lose'), 1400);
     }
   }
 }
@@ -1063,6 +1228,7 @@ function drawEntity(e) {
   ctx.stroke();
 }
 
+applyLanguage(currentLang);
 requestAnimationFrame(loop);
 </script>
 </body>
