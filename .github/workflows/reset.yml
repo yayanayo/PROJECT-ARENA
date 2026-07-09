@@ -1,0 +1,12 @@
+name: pages build and deployment
+on:
+  push:
+    branches: [ main ]
+concurrency:
+  group: pages-build-deployment
+  cancel-in-progress: true
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Resetting queue"
