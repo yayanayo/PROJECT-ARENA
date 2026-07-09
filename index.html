@@ -1109,6 +1109,11 @@ function setMobileMode() {
   pauseHint.textContent = I18N[currentLang].pauseBtnText;
 }
 
+function getPointerId(e) {
+  if (e.pointerId !== undefined) return e.pointerId;
+  return e.identifier !== undefined ? e.identifier : null;
+}
+
 function updateStickPosition(stick, clientX, clientY) {
   const rect = stick.getBoundingClientRect();
   const cx = rect.left + rect.width / 2;
@@ -1129,10 +1134,14 @@ function resetStick(stick) {
 }
 
 function handleStickDown(e, stickType) {
-  if (e.pointerType === 'mouse' || activeStickPointers[stickType] !== null) return;
+  if (e.pointerType === 'mouse' && e.pointerType !== undefined) return;
   const stick = stickType === 'move' ? moveStick : attackStick;
-  activeStickPointers[stickType] = e.pointerId;
-  stick.setPointerCapture(e.pointerId);
+  const pointerId = getPointerId(e);
+  if (pointerId === null || activeStickPointers[stickType] !== null) return;
+  activeStickPointers[stickType] = pointerId;
+  if (stick.setPointerCapture) {
+    stick.setPointerCapture(pointerId);
+  }
   const pos = updateStickPosition(stick, e.clientX, e.clientY);
   if (stickType === 'move') {
     mobileInput.moveX = pos.x;
@@ -1145,7 +1154,8 @@ function handleStickDown(e, stickType) {
 }
 
 function handleStickMove(e, stickType) {
-  if (activeStickPointers[stickType] !== e.pointerId) return;
+  const pointerId = getPointerId(e);
+  if (pointerId === null || activeStickPointers[stickType] !== pointerId) return;
   const stick = stickType === 'move' ? moveStick : attackStick;
   const pos = updateStickPosition(stick, e.clientX, e.clientY);
   if (stickType === 'move') {
@@ -1158,9 +1168,12 @@ function handleStickMove(e, stickType) {
 }
 
 function handleStickUp(e, stickType) {
-  if (activeStickPointers[stickType] !== e.pointerId) return;
+  const pointerId = getPointerId(e);
+  if (pointerId === null || activeStickPointers[stickType] !== pointerId) return;
   const stick = stickType === 'move' ? moveStick : attackStick;
-  stick.releasePointerCapture(e.pointerId);
+  if (stick.releasePointerCapture) {
+    stick.releasePointerCapture(pointerId);
+  }
   activeStickPointers[stickType] = null;
   if (stickType === 'move') {
     mobileInput.moveX = 0;
