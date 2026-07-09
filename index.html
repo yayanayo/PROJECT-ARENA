@@ -147,10 +147,10 @@
     background: rgba(0, 0, 0, 0.75);
     transition: height 0.05s linear;
   }
-  #slotQ { border-color: var(--accent-skill-q); }
-  #slotE { border-color: var(--accent-skill-e); }
-  #slotBasic { border-color: var(--accent-player); }
-  .skill-slot.charging { box-shadow: 0 0 14px var(--accent-skill-e); }
+  #slotQ { border-color: var(--class-accent, var(--accent-skill-q)); }
+  #slotE { border-color: var(--class-accent, var(--accent-skill-e)); }
+  #slotBasic { border-color: var(--class-accent, var(--accent-player)); }
+  .skill-slot.charging { box-shadow: 0 0 14px var(--class-accent, var(--accent-skill-e)); }
 
   #hint {
     top: 24px; left: 50%; transform: translateX(-50%);
@@ -587,14 +587,19 @@ document.getElementById('langKoBtn').addEventListener('click', () => applyLangua
 document.getElementById('langEnBtn').addEventListener('click', () => applyLanguage('en'));
 
 // 클래스 선택 이벤트
+function applyClassAccent() {
+  document.documentElement.style.setProperty('--class-accent', CLASSES[selectedClassKey].color);
+}
 document.querySelectorAll('.class-card').forEach(card => {
   card.addEventListener('click', () => {
     document.querySelectorAll('.class-card').forEach(c => c.classList.remove('active'));
     card.classList.add('active');
     selectedClassKey = card.dataset.class;
+    applyClassAccent();
     applyLanguage(currentLang);
   });
 });
+applyClassAccent();
 
 const DIFFICULTY = {
   easy:      { speedMult: 0.85, shootMin: 1.5,  shootMax: 2.1,  dmgMult: 0.8,  qCooldown: 6.5, eCooldown: 11,  homing: 0.6 },
@@ -764,12 +769,18 @@ function fireProjectile(from, tx, ty, color, dmg, owner, speed, homing) {
 }
 
 // 클래스별로 개별화된 이동/보조 스킬 (Q)
+const MAGE_BLINK_RANGE = 300;
 function useQSkill() {
   const cls = CLASSES[selectedClassKey];
   if (selectedClassKey === 'mage') {
-    // ARCANE MAGE: 마우스 위치로 순간 점멸 (Blink)
-    player.x = mouse.x;
-    player.y = mouse.y;
+    // ARCANE MAGE: 에임 방향으로 순간 점멸 (사거리 제한, 최대 300px)
+    const dx = mouse.x - player.x, dy = mouse.y - player.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const blinkDist = Math.min(len, MAGE_BLINK_RANGE);
+    player.x += (dx / len) * blinkDist;
+    player.y += (dy / len) * blinkDist;
+    player.x = Math.max(20, Math.min(canvas.width - 20, player.x));
+    player.y = Math.max(20, Math.min(canvas.height - 20, player.y));
     spawnDeathParticles(player.x, player.y, cls.color);
     cooldowns.q.cur = cooldowns.q.max;
   } else if (selectedClassKey === 'assassin') {
@@ -778,6 +789,8 @@ function useQSkill() {
     const len = Math.hypot(dx, dy) || 1;
     player.x += (dx / len) * 260;
     player.y += (dy / len) * 260;
+    player.x = Math.max(20, Math.min(canvas.width - 20, player.x));
+    player.y = Math.max(20, Math.min(canvas.height - 20, player.y));
     spawnDeathParticles(player.x, player.y, cls.color);
     cooldowns.q.cur = cooldowns.q.max;
   } else {
@@ -829,19 +842,20 @@ function releaseCharge() {
   }
 }
 
-function applyEffectsFromBurst(target, sourceX, sourceY) {
+function applyEffectsFromBurst(target, sourceX, sourceY, owner) {
   const dx = target.x - sourceX, dy = target.y - sourceY;
   const len = Math.hypot(dx, dy) || 1;
-  
-  // 팔라딘의 충격파는 밀쳐내기와 둔화 시간이 훨씬 강력함
-  const power = selectedClassKey === 'paladin' ? 1300 : 780;
-  const slowDur = selectedClassKey === 'paladin' ? 4500 : 3000;
-  
+
+  // 팔라딘의 충격파는 밀쳐내기와 둔화 시간이 훨씬 강력함 (플레이어가 팔라딘일 때, 플레이어가 시전한 경우에만 적용)
+  const isPlayerPaladinCast = owner === 'player' && selectedClassKey === 'paladin';
+  const power = isPlayerPaladinCast ? 1300 : 780;
+  const slowDur = isPlayerPaladinCast ? 4500 : 3000;
+
   target.knockbackVx = (dx / len) * power;
   target.knockbackVy = (dy / len) * power;
   target.knockbackDisplayUntil = now_ms() + 500;
   target.slowUntil = now_ms() + slowDur;
-  target.slowFactor = selectedClassKey === 'paladin' ? 0.3 : 0.45;
+  target.slowFactor = isPlayerPaladinCast ? 0.3 : 0.45;
 }
 
 function spawnDamageText(x, y, amount) {
@@ -1058,11 +1072,11 @@ function update(dt) {
     if (!a.dealt) {
       if (a.owner === 'player' && bot.alive && dist(a.x, a.y, bot.x, bot.y) < a.r) {
         applyDamage(bot, a.dmg, 'player');
-        applyEffectsFromBurst(bot, a.x, a.y);
+        applyEffectsFromBurst(bot, a.x, a.y, 'player');
         a.dealt = true;
       } else if (a.owner === 'bot' && player.alive && dist(a.x, a.y, player.x, player.y) < a.r) {
-        applyDamage(player, 24 * currentDifficulty.dmgMult, 'bot');
-        applyEffectsFromBurst(player, a.x, a.y);
+        applyDamage(player, a.dmg * currentDifficulty.dmgMult, 'bot');
+        applyEffectsFromBurst(player, a.x, a.y, 'bot');
         a.dealt = true;
       }
     }
