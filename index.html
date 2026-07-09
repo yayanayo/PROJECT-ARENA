@@ -192,6 +192,10 @@
     visibility: visible;
     opacity: 1;
   }
+  body.mobile-ui #pauseHint {
+    pointer-events: auto;
+    cursor: pointer;
+  }
 
   .mobile-controls {
     position: fixed;
@@ -202,7 +206,7 @@
     display: none;
     justify-content: space-between;
     align-items: flex-end;
-    pointer-events: none;
+    pointer-events: auto;
     z-index: 12;
     opacity: 0;
     transition: opacity 0.2s ease;
@@ -217,6 +221,7 @@
     align-items: center;
     justify-content: center;
     pointer-events: auto;
+    touch-action: none;
   }
   .stick-base {
     position: absolute;
@@ -1071,6 +1076,7 @@ window.addEventListener('resize', resize);
 
 const keys = {};
 const mouse = { x: 0, y: 0, down: false };
+let mobileInput = { moveX: 0, moveY: 0, attack: false };
 
 window.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
@@ -1092,6 +1098,118 @@ window.addEventListener('keyup', e => {
 canvas.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
 canvas.addEventListener('mousedown', e => { if (e.button === 0) mouse.down = true; });
 canvas.addEventListener('mouseup', e => { if (e.button === 0) mouse.down = false; });
+
+const moveStick = document.getElementById('moveStick');
+const attackStick = document.getElementById('attackStick');
+const pauseHint = document.getElementById('pauseHint');
+let activeStickPointers = { move: null, attack: null };
+
+function setMobileMode() {
+  document.body.classList.add('mobile-ui');
+  pauseHint.textContent = I18N[currentLang].pauseBtnText;
+}
+
+function updateStickPosition(stick, clientX, clientY) {
+  const rect = stick.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const dx = clientX - cx;
+  const dy = clientY - cy;
+  const maxDist = rect.width * 0.35;
+  const len = Math.hypot(dx, dy);
+  const clamped = len > maxDist ? maxDist / len : 1;
+  const nx = dx * clamped;
+  const ny = dy * clamped;
+  stick.querySelector('.stick-knob').style.transform = `translate(${nx}px, ${ny}px)`;
+  return { x: nx / maxDist, y: ny / maxDist };
+}
+
+function resetStick(stick) {
+  stick.querySelector('.stick-knob').style.transform = 'translate(0, 0)';
+}
+
+function handleStickDown(e, stickType) {
+  if (e.pointerType === 'mouse' || activeStickPointers[stickType] !== null) return;
+  const stick = stickType === 'move' ? moveStick : attackStick;
+  activeStickPointers[stickType] = e.pointerId;
+  stick.setPointerCapture(e.pointerId);
+  const pos = updateStickPosition(stick, e.clientX, e.clientY);
+  if (stickType === 'move') {
+    mobileInput.moveX = pos.x;
+    mobileInput.moveY = pos.y;
+  } else {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+    mobileInput.attack = true;
+  }
+}
+
+function handleStickMove(e, stickType) {
+  if (activeStickPointers[stickType] !== e.pointerId) return;
+  const stick = stickType === 'move' ? moveStick : attackStick;
+  const pos = updateStickPosition(stick, e.clientX, e.clientY);
+  if (stickType === 'move') {
+    mobileInput.moveX = pos.x;
+    mobileInput.moveY = pos.y;
+  } else {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+  }
+}
+
+function handleStickUp(e, stickType) {
+  if (activeStickPointers[stickType] !== e.pointerId) return;
+  const stick = stickType === 'move' ? moveStick : attackStick;
+  stick.releasePointerCapture(e.pointerId);
+  activeStickPointers[stickType] = null;
+  if (stickType === 'move') {
+    mobileInput.moveX = 0;
+    mobileInput.moveY = 0;
+  } else {
+    mobileInput.attack = false;
+  }
+  resetStick(stick);
+}
+
+moveStick.addEventListener('pointerdown', e => handleStickDown(e, 'move'));
+moveStick.addEventListener('pointermove', e => handleStickMove(e, 'move'));
+moveStick.addEventListener('pointerup', e => handleStickUp(e, 'move'));
+moveStick.addEventListener('pointercancel', e => handleStickUp(e, 'move'));
+moveStick.addEventListener('touchstart', e => { e.preventDefault(); handleStickDown(e.changedTouches[0], 'move'); });
+moveStick.addEventListener('touchmove', e => { e.preventDefault(); handleStickMove(e.changedTouches[0], 'move'); });
+moveStick.addEventListener('touchend', e => { e.preventDefault(); handleStickUp(e.changedTouches[0], 'move'); });
+
+attackStick.addEventListener('pointerdown', e => handleStickDown(e, 'attack'));
+attackStick.addEventListener('pointermove', e => handleStickMove(e, 'attack'));
+attackStick.addEventListener('pointerup', e => handleStickUp(e, 'attack'));
+attackStick.addEventListener('pointercancel', e => handleStickUp(e, 'attack'));
+attackStick.addEventListener('touchstart', e => { e.preventDefault(); handleStickDown(e.changedTouches[0], 'attack'); });
+attackStick.addEventListener('touchmove', e => { e.preventDefault(); handleStickMove(e.changedTouches[0], 'attack'); });
+attackStick.addEventListener('touchend', e => { e.preventDefault(); handleStickUp(e.changedTouches[0], 'attack'); });
+
+pauseHint.addEventListener('pointerdown', () => {
+  if (gameState === 'playing') pauseGame();
+});
+pauseHint.addEventListener('touchstart', e => {
+  e.preventDefault(); if (gameState === 'playing') pauseGame();
+});
+
+document.querySelector('.skill-stick.q').addEventListener('pointerdown', () => {
+  if (gameState === 'playing' && cooldowns.q.cur <= 0) {
+    useQSkill(player, mouse.x, mouse.y, 'player');
+    cooldowns.q.cur = cooldowns.q.max;
+  }
+});
+
+document.querySelector('.skill-stick.e').addEventListener('pointerdown', () => {
+  if (gameState === 'playing' && cooldowns.e.cur <= 0 && !player.eCharging) {
+    startCharging();
+  }
+});
+
+if ('ontouchstart' in window || navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches) {
+  setMobileMode();
+}
 
 // ---------- 클래스 고유 스킬 및 속성 정의 ----------
 const CLASSES = {
@@ -1419,7 +1537,7 @@ const I18N = {
     cNamePaladin: '팔라딘', cDescPaladin: '근접 충격파 발사 후 대미지를 2회 막아주는 성스러운 보호막을 획득합니다.',
     playerTag: '나', enemyTagPrefix: '봇 (', settingsTitle: 'SETTINGS', settingsSub: '게임 설정을 변경할 수 있습니다',
     damageTextLabel: '대미지 표시', toggleOn: 'ON', toggleOff: 'OFF', closeBtn: '닫기',
-    soundVolumeLabel: '사운드 볼륨', sliderTitle: '볼륨', uiScaleLabel: 'UI 크기', uiScaleTitle: '크기', uiPreviewBtn: 'UI 미리보기', leavePreviewBtn: '나가기',
+    soundVolumeLabel: '사운드 볼륨', sliderTitle: '볼륨', uiScaleLabel: 'UI 크기', uiScaleTitle: '크기', uiPreviewBtn: 'UI 미리보기', leavePreviewBtn: '나가기', pauseHintText: 'ESC로 일시 정지', pauseBtnText: '일시 정지',
     skillDetailBtn: '스킬 설명',
     diffTitle: '난이도 선택', diffSub: '상대의 속도 · 공격 빈도 · 스킬 사용을 결정해요',
     diffEasy: '쉬움', diffNormal: '보통', diffHard: '어려움', diffNightmare: '악몽', backBtn: '뒤로가기',
@@ -1496,6 +1614,7 @@ function applyLanguage(lang) {
   document.getElementById('uiScaleTitle').textContent = t.uiScaleTitle;
   document.getElementById('openUiPreviewBtn').textContent = t.uiPreviewBtn;
   document.getElementById('closeUiPreviewBtn').textContent = t.leavePreviewBtn;
+  document.getElementById('pauseHint').textContent = document.body.classList.contains('mobile-ui') ? t.pauseBtnText : t.pauseHintText;
   toggleDamageTextBtn.textContent = showDamageText ? t.toggleOn : t.toggleOff;
   document.getElementById('closeSettingsBtn').textContent = t.closeBtn;
 
@@ -2185,6 +2304,10 @@ function update(dt) {
       if (keys['s']) dy += 1;
       if (keys['a']) dx -= 1;
       if (keys['d']) dx += 1;
+      if (document.body.classList.contains('mobile-ui')) {
+        dx += mobileInput.moveX;
+        dy += mobileInput.moveY;
+      }
       const len = Math.hypot(dx, dy) || 1;
       player.x += (dx / len) * speed * dt;
       player.y += (dy / len) * speed * dt;
@@ -2193,7 +2316,7 @@ function update(dt) {
     player.x = Math.max(20, Math.min(canvas.width - 20, player.x));
     player.y = Math.max(20, Math.min(canvas.height - 20, player.y));
 
-    if (mouse.down && cooldowns.basic.cur <= 0) {
+    if ((mouse.down || mobileInput.attack) && cooldowns.basic.cur <= 0) {
       fireProjectile(player, mouse.x, mouse.y, cls.color, cls.basicDmg, 'player', cls.basicSpeed, cls.basicHoming);
       cooldowns.basic.cur = cooldowns.basic.max;
     }
