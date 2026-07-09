@@ -26,6 +26,7 @@
     --text-dim: #5c6a7a;
     --panel-bg: #0e131aee;
     --panel-border: #232e3a;
+    --ui-scale: 1;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
@@ -37,29 +38,43 @@
   }
   
   #arena {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     display: block;
     background: var(--bg-arena);
     cursor: crosshair;
+    z-index: 0;
   }
   .hud {
     position: fixed;
     pointer-events: none;
     user-select: none;
+    z-index: 10;
   }
 
   /* Topbar */
   #topbar {
-    top: 20px; left: 24px; right: 24px;
+    top: calc(20px / var(--ui-scale));
+    left: calc(24px / var(--ui-scale));
+    width: calc((100% - 48px) / var(--ui-scale));
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: start;
   }
   
   .hud-player-side {
     display: flex; flex-direction: column; align-items: flex-start;
+    min-width: 0;
+    justify-self: start;
+    max-width: min(45vw, 320px);
   }
   .hud-enemy-side {
     display: flex; flex-direction: column; align-items: flex-end;
+    min-width: 0;
+    justify-self: end;
+    max-width: min(45vw, 320px);
   }
 
   .name-tag {
@@ -72,7 +87,9 @@
   }
   
   .hp-bar-wrap {
-    width: 320px;
+    width: clamp(220px, 24vw, 320px);
+    min-width: 180px;
+    max-width: 320px;
     height: 24px;
     background: #00000080;
     border: 2px solid var(--panel-border);
@@ -109,6 +126,24 @@
   .hud-player-side .effects-row { justify-content: flex-start; }
   .hud-enemy-side .effects-row { justify-content: flex-end; }
 
+  .hp-bar {
+    position: relative;
+    min-width: 180px;
+    max-width: 260px;
+    width: clamp(180px, 24vw, 260px);
+  }
+  .hp-text {
+    position: absolute; inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px; font-weight: 700;
+    letter-spacing: 1px; color: #ffffff;
+    text-shadow: 0 0 4px #000000;
+    pointer-events: none;
+  }
+
   .effect-chip {
     font-family: 'Rajdhani', sans-serif;
     font-size: 13px; font-weight: 700;
@@ -125,6 +160,127 @@
     bottom: 28px; left: 50%; transform: translateX(-50%);
     display: flex; gap: 16px;
   }
+  #topbar,
+  #status,
+  #skillbar,
+  #pauseHint {
+    visibility: hidden;
+  }
+  #hint {
+    display: none;
+  }
+  #pauseHint {
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) scale(var(--ui-scale));
+    position: fixed;
+    padding: 8px 14px;
+    background: rgba(7, 12, 18, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    z-index: 15;
+  }
+  body.show-hud:not(.preview-mode) #pauseHint {
+    visibility: visible;
+    opacity: 1;
+  }
+
+  .mobile-controls {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 18px;
+    padding: 0 16px;
+    display: none;
+    justify-content: space-between;
+    align-items: flex-end;
+    pointer-events: none;
+    z-index: 12;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .mobile-stick {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    min-width: 120px;
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+  }
+  .stick-base {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  }
+  .stick-knob {
+    position: absolute;
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.14);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 0 8px rgba(255, 255, 255, 0.02);
+  }
+  .attack-stick {
+    width: 140px;
+    height: 140px;
+  }
+  .skill-buttons {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .skill-stick {
+    width: 62px;
+    height: 62px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.09);
+    border: 2px solid rgba(255, 255, 255, 0.14);
+    display: grid;
+    place-items: center;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 1px;
+  }
+  .skill-stick.q { background: rgba(242, 181, 68, 0.18); border-color: rgba(242, 181, 68, 0.28); }
+  .skill-stick.e { background: rgba(169, 112, 232, 0.18); border-color: rgba(169, 112, 232, 0.28); }
+
+  @media (max-width: 920px), (pointer: coarse) {
+    .mobile-controls {
+      display: flex;
+    }
+    body.show-hud:not(.preview-mode) .mobile-controls {
+      opacity: 1;
+    }
+  }
+
+  body.show-hud #topbar,
+  body.show-hud #hint,
+  body.show-hud #status,
+  body.show-hud #skillbar {
+    visibility: visible;
+  }
+
   .skill-slot {
     width: 90px; height: 90px; flex-shrink: 0;
     background: var(--panel-bg);
@@ -132,6 +288,15 @@
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
     position: relative; overflow: hidden;
+  }
+  .skill-slot .cooldown-text {
+    position: absolute;
+    bottom: 8px;
+    left: 50%; transform: translateX(-50%);
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.5px;
+    font-variant-numeric: tabular-nums;
   }
   .skill-slot .key { 
     font-family: 'Orbitron', sans-serif; 
@@ -153,10 +318,107 @@
   #slotBasic { border-color: var(--class-accent, var(--accent-player)); }
   .skill-slot.charging { box-shadow: 0 0 14px var(--class-accent, var(--accent-skill-e)); }
 
-  #hint {
-    top: 24px; left: 50%; transform: translateX(-50%);
-    font-size: 15px; color: var(--text-dim); letter-spacing: 1px;
-    text-align: center; line-height: 1.6; font-weight: 600; white-space: nowrap;
+  body:not(.show-hud) #topbar,
+  body:not(.show-hud) #hint,
+  body:not(.show-hud) #status,
+  body:not(.show-hud) #skillbar {
+    visibility: hidden;
+  }
+
+  #topbar {
+    transform: scale(var(--ui-scale));
+    transform-origin: top left;
+  }
+  #hint,
+  #status,
+  #skillbar {
+    transform: translateX(-50%) scale(var(--ui-scale));
+    transform-origin: bottom center;
+  }
+
+  .ui-preview {
+    width: min(420px, calc(100vw - 48px));
+    padding: 18px;
+    margin-top: 18px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 18px;
+    box-shadow: 0 0 24px rgba(0,0,0,0.15);
+  }
+  .ui-preview .preview-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    text-align: center;
+  }
+  .ui-preview .preview-topbar {
+    display: flex; gap: 12px; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .ui-preview .preview-name-tag {
+    padding: 8px 12px;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 999px;
+    font-size: 12px;
+    color: var(--text-primary);
+    background: rgba(255,255,255,0.04);
+  }
+  .ui-preview .preview-name-tag.preview-enemy {
+    color: var(--accent-enemy);
+    border-color: rgba(224,85,79,0.2);
+  }
+  .ui-preview .preview-hp-bar-wrap {
+    flex: 1;
+    min-width: 160px;
+    height: 22px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.06);
+    overflow: hidden;
+    position: relative;
+  }
+  .ui-preview .preview-hp-bar-fill {
+    position: absolute; inset: 0;
+    width: 76%;
+    background: linear-gradient(90deg, rgba(79,214,196,0.9), rgba(79,214,196,0.65));
+  }
+  .ui-preview .preview-hp-text {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+  .ui-preview .preview-effect-row {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;
+  }
+  .ui-preview .preview-slot {
+    position: relative;
+    width: 100px; height: 90px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 10px;
+    display: grid;
+    gap: 6px;
+    align-items: end;
+  }
+  .ui-preview .preview-key {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px; font-weight: 700;
+    color: var(--text-primary);
+  }
+  .ui-preview .preview-label {
+    font-size: 12px; color: var(--text-dim); letter-spacing: 0.5px;
+  }
+  .ui-preview .preview-cooldown-bar {
+    position: absolute; left: 0; bottom: 0; right: 0;
+    background: rgba(0,0,0,0.45);
+  }
+  .ui-preview .preview-cooldown-text {
+    position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
+    font-size: 11px; color: var(--text-primary);
   }
   #status {
     bottom: 140px; left: 50%; transform: translateX(-50%);
@@ -169,10 +431,53 @@
   /* Screen Overlay */
   .overlay-screen {
     position: fixed; inset: 0;
+    width: 100%; height: 100%; min-width: 100vw; min-height: 100vh;
     background: radial-gradient(circle at 50% 40%, rgba(20, 28, 38, 0.94) 0%, rgba(10, 14, 20, 0.97) 70%);
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
     z-index: 100;
+  }
+  #topbar {
+    transform: scale(var(--ui-scale));
+    transform-origin: top left;
+  }
+  #hint,
+  #status,
+  #skillbar {
+    transform: translateX(-50%) scale(var(--ui-scale));
+    transform-origin: bottom center;
+  }
+  #screenMain {
+    position: relative;
+    width: 100%; height: 100%;
+    overflow: hidden;
+  }
+  #screenMain::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 30% 25%, rgba(79,214,196,0.12), transparent 22%),
+                radial-gradient(circle at 70% 30%, rgba(224,85,79,0.1), transparent 20%),
+                radial-gradient(circle at 50% 70%, rgba(122,171,236,0.1), transparent 18%);
+    pointer-events: none;
+  }
+  .lobby-badges {
+    display: flex; gap: 12px; margin: 18px 0 28px;
+    flex-wrap: wrap; justify-content: center; z-index: 1;
+  }
+  .lobby-badge {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 12px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    box-shadow: 0 0 16px rgba(0,0,0,0.08);
+  }
+  #screenMain .btn-column {
+    position: relative; z-index: 1;
   }
   .overlay-screen.hidden { display: none; }
   .lobby-title {
@@ -198,7 +503,7 @@
   /* Class Select Grid */
   .class-select-grid {
     display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
-    margin-bottom: 30px; width: 880px; max-width: 95vw;
+    margin-bottom: 30px; width: 920px; max-width: 95vw;
   }
   .class-card {
     pointer-events: all;
@@ -206,12 +511,166 @@
     border: 2px solid var(--panel-border);
     padding: 20px 16px; text-align: center; cursor: pointer;
     transition: all 0.2s ease; display: flex; flex-direction: column; align-items: center;
+    position: relative; justify-content: space-between;
   }
   .class-card:hover { border-color: var(--text-primary); transform: translateY(-3px); }
   .class-card.active { border-color: var(--accent-player); box-shadow: 0 0 18px var(--accent-player-glow); }
   .class-icon { font-size: 28px; margin-bottom: 8px; }
   .class-name { font-family: 'Orbitron', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 6px; color: var(--accent-player); }
-  .class-desc { font-size: 13px; color: var(--text-dim); line-height: 1.4; }
+  .class-desc { font-size: 13px; color: var(--text-dim); line-height: 1.4; margin-bottom: 12px; }
+  
+  .skill-detail-btn {
+    pointer-events: all;
+    background: transparent;
+    border: 1px solid var(--panel-border);
+    color: var(--accent-player);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px; font-weight: 700;
+    padding: 6px 10px; cursor: pointer;
+    transition: all 0.15s; border-radius: 2px;
+  }
+  .skill-detail-btn:hover {
+    background: var(--accent-player);
+    color: #0a0e14;
+  }
+
+  /* Modal for Skill Detail */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 150;
+  }
+  .modal-overlay.hidden { display: none; }
+  .modal-content {
+    background: var(--panel-bg);
+    border: 2px solid var(--accent-player);
+    padding: 28px; width: 440px; max-width: 90vw;
+    box-shadow: 0 0 30px rgba(0,0,0,0.8);
+  }
+  .ui-preview-modal,
+  #uiPreviewModal:not(.hidden) {
+    position: fixed;
+    inset: 0;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 160;
+  }
+  #uiPreviewModal.hidden {
+    display: none;
+  }
+  #uiPreviewModal .modal-content {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+  }
+  #uiPreviewModal .preview-exit-btn {
+    display: none;
+    pointer-events: all;
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 170;
+    width: 160px;
+    max-width: 90vw;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  body.preview-mode #uiPreviewModal .preview-exit-btn {
+    display: inline-flex;
+  }
+  #uiPreviewModal .preview-exit-btn.secondary {
+    border-color: var(--panel-border);
+    color: var(--text-dim);
+    background: rgba(14, 19, 26, 0.98);
+  }
+  #uiPreviewModal .preview-exit-btn.secondary:hover {
+    border-color: var(--text-primary);
+    color: var(--text-primary);
+    background: rgba(14, 19, 26, 0.95);
+  }
+  .ui-preview-modal .preview-hint {
+    display: none;
+  }
+  .ui-preview-modal .preview-slot {
+    width: 90px;
+    height: 90px;
+    background: var(--panel-bg);
+    border: 2px solid var(--panel-border);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .ui-preview-modal .preview-key {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .ui-preview-modal .preview-label {
+    color: var(--text-dim);
+    font-size: 12px;
+    letter-spacing: 1px;
+    margin-top: 6px;
+    font-weight: 600;
+    text-align: center;
+  }
+  .ui-preview-modal .preview-cooldown-bar {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.75);
+  }
+  .ui-preview-modal .preview-cooldown-text {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  .ui-preview-modal .preview-hud-topbar,
+  .ui-preview-modal .preview-hud-skillbar {
+    display: none;
+  }
+  .modal-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 20px; font-weight: 700; color: var(--accent-player);
+    margin-bottom: 16px; text-transform: uppercase;
+  }
+  .modal-skill-item {
+    margin-bottom: 14px; text-align: left;
+    border-bottom: 1px solid var(--panel-border);
+    padding-bottom: 10px;
+  }
+  .modal-skill-item:last-child { border-bottom: none; }
+  .modal-skill-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 4px;
+  }
+  .modal-skill-desc {
+    font-size: 13px; color: var(--text-dim); line-height: 1.4;
+  }
 
   .difficulty-select { display: flex; gap: 12px; margin-bottom: 32px; }
   .diff-btn {
@@ -231,6 +690,10 @@
     pointer-events: all; background: transparent;
     padding: 16px 48px; font-family: 'Orbitron', sans-serif;
     font-weight: 700; font-size: 17px; letter-spacing: 3px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
     cursor: pointer; transition: all 0.15s;
   }
   .action-btn.primary { border: 2px solid var(--accent-player); color: var(--accent-player); }
@@ -246,15 +709,154 @@
     width: 320px; background: var(--panel-bg); border: 2px solid var(--panel-border);
     padding: 16px 20px; margin-bottom: 28px;
   }
+  .setting-item.setting-range {
+    flex-direction: column; align-items: stretch;
+  }
+  .setting-item.setting-range .slider-title {
+    font-size: 13px; color: var(--text-dim); margin-top: 10px; margin-bottom: 6px;
+    letter-spacing: 1px; text-transform: uppercase;
+  }
+  .setting-item.setting-range input[type="range"] {
+    width: 100%; accent-color: var(--accent-player);
+  }
+  .setting-item.setting-range .range-value {
+    font-size: 13px; color: var(--text-primary); text-align: right;
+    margin-top: 6px;
+  }
   .setting-toggle-btn {
     pointer-events: all; background: transparent; border: 2px solid var(--accent-player);
     color: var(--accent-player); padding: 6px 16px; font-family: 'Orbitron', sans-serif;
     font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.15s;
   }
+  #screenSettings .action-btn + .action-btn {
+    margin-top: 16px;
+  }
+  .ui-preview-modal {
+    width: min(960px, 95vw);
+    max-height: 95vh;
+    padding: 20px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+  .ui-preview-modal .preview-title {
+    text-align: left;
+    font-size: 18px;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+  .ui-preview-modal .preview-arena {
+    position: relative;
+    width: 100%;
+    min-height: 560px;
+    border-radius: 28px;
+    overflow: hidden;
+    background: var(--bg-arena);
+    border: 2px solid rgba(255,255,255,0.08);
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.4);
+  }
+  .ui-preview-modal .preview-arena::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 30% 25%, rgba(79,214,196,0.12), transparent 18%),
+                radial-gradient(circle at 70% 30%, rgba(224,85,79,0.1), transparent 18%),
+                radial-gradient(circle at 50% 70%, rgba(122,171,236,0.1), transparent 16%);
+    pointer-events: none;
+  }
+  .ui-preview-modal .preview-hud-topbar {
+    position: absolute;
+    top: 20px;
+    left: 24px;
+    right: 24px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: start;
+    z-index: 2;
+  }
+  .ui-preview-modal .preview-hud-topbar .preview-side {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .ui-preview-modal .preview-hud-topbar .preview-enemy-side {
+    align-items: flex-end;
+  }
+  .ui-preview-modal .preview-hint {
+    position: absolute;
+    bottom: 144px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    padding: 12px 18px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.06);
+    color: var(--text-dim);
+    font-size: 12px;
+    text-align: center;
+    width: min(620px, calc(100% - 48px));
+  }
+  .ui-preview-modal .preview-hud-skillbar {
+    position: absolute;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 16px;
+    z-index: 2;
+  }
+  .ui-preview-modal .preview-skillbar .preview-slot {
+    width: 90px; height: 90px;
+    background: var(--panel-bg);
+    border: 2px solid var(--panel-border);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .ui-preview-modal .preview-skillbar .preview-key {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .ui-preview-modal .preview-skillbar .preview-label {
+    color: var(--text-dim);
+    font-size: 12px;
+    letter-spacing: 1px;
+    margin-top: 6px;
+    font-weight: 600;
+    text-align: center;
+  }
+  .ui-preview-modal .preview-skillbar .preview-cooldown-bar {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: rgba(0,0,0,0.75);
+  }
+  .ui-preview-modal .preview-skillbar .preview-cooldown-text {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  .ui-preview-modal .preview-arena .effects-row {
+    justify-content: flex-start;
+  }
   .setting-toggle-btn.off { border-color: var(--panel-border); color: var(--text-dim); }
 
-  #langSwitch {
-    position: fixed; top: 20px; right: 24px; display: flex; gap: 6px; z-index: 200; pointer-events: all;
+  #screenMain #langSwitch {
+    position: absolute; top: 20px; right: 24px; display: flex; gap: 6px; z-index: 200; pointer-events: all;
   }
   .lang-btn {
     pointer-events: all; background: transparent; border: 2px solid var(--panel-border);
@@ -267,16 +869,14 @@
 </head>
 <body>
 
-<div id="langSwitch">
-  <button class="lang-btn" id="langKoBtn" data-lang="ko">한국어</button>
-  <button class="lang-btn" id="langEnBtn" data-lang="en">EN</button>
-</div>
-
 <!-- 메인 화면 -->
 <div class="overlay-screen" id="screenMain">
+  <div id="langSwitch">
+    <button class="lang-btn" id="langKoBtn" data-lang="ko">한국어</button>
+    <button class="lang-btn" id="langEnBtn" data-lang="en">EN</button>
+  </div>
   <div class="lobby-title">PROJECT: ARENA</div>
   <div class="lobby-sub" id="lobbySub">전장에 참여하여 승리하세요</div>
-  
   <div class="btn-column">
     <button class="action-btn primary" id="mainStartBtn">전투 시작</button>
     <button class="action-btn secondary" id="mainClassBtn">클래스 선택</button>
@@ -291,28 +891,49 @@
 
   <div class="class-select-grid" id="classSelectGrid">
     <div class="class-card active" data-class="striker">
-      <div class="class-icon">⚡</div>
-      <div class="class-name" id="cNameStriker">STRIKER</div>
-      <div class="class-desc" id="cDescStriker">균형 잡힌 원거리 투사체 공격과 대시, 파열구 범위 기술을 사용합니다.</div>
+      <div>
+        <div class="class-icon">⚡</div>
+        <div class="class-name" id="cNameStriker">STRIKER</div>
+        <div class="class-desc" id="cDescStriker">균형 잡힌 원거리 투사체 공격과 대시, 파열구 범위 기술을 사용합니다.</div>
+      </div>
+      <button class="skill-detail-btn" data-class-detail="striker">스킬 설명</button>
     </div>
     <div class="class-card" data-class="mage">
-      <div class="class-icon">🔮</div>
-      <div class="class-name" id="cNameMage">ARCANE MAGE</div>
-      <div class="class-desc" id="cDescMage">유도 탄환과 점멸, 마우스 위치에 1초 뒤 낙하하는 메테오를 사용합니다.</div>
+      <div>
+        <div class="class-icon">🔮</div>
+        <div class="class-name" id="cNameMage">ARCANE MAGE</div>
+        <div class="class-desc" id="cDescMage">약한 유도 탄환과 점멸, 마우스 위치에 1초 뒤 낙하하는 메테오를 사용합니다.</div>
+      </div>
+      <button class="skill-detail-btn" data-class-detail="mage">스킬 설명</button>
     </div>
     <div class="class-card" data-class="assassin">
-      <div class="class-icon">🗡️</div>
-      <div class="class-name" id="cNameAssassin">ASSASSIN</div>
-      <div class="class-desc" id="cDescAssassin">그림자 도약 후, 마우스 방향으로 빠른 암살용 칼날 탄환들을 난사합니다.</div>
+      <div>
+        <div class="class-icon">🗡️</div>
+        <div class="class-name" id="cNameAssassin">ASSASSIN</div>
+        <div class="class-desc" id="cDescAssassin">그림자 도약 후, 마우스 방향으로 빠른 암살용 칼날 탄환들을 난사합니다.</div>
+      </div>
+      <button class="skill-detail-btn" data-class-detail="assassin">스킬 설명</button>
     </div>
     <div class="class-card" data-class="paladin">
-      <div class="class-icon">🛡️</div>
-      <div class="class-name" id="cNamePaladin">PALADIN</div>
-      <div class="class-desc" id="cDescPaladin">근접 충격파 발사 후 대미지를 2회 막아주는 성스러운 보호막을 획득합니다.</div>
+      <div>
+        <div class="class-icon">🛡️</div>
+        <div class="class-name" id="cNamePaladin">PALADIN</div>
+        <div class="class-desc" id="cDescPaladin">근접 충격파 발사 후 대미지를 2회 막아주는 성스러운 보호막을 획득합니다.</div>
+      </div>
+      <button class="skill-detail-btn" data-class-detail="paladin">스킬 설명</button>
     </div>
   </div>
 
   <button class="action-btn secondary" id="closeClassBtn">확인</button>
+</div>
+
+<!-- 상세 스킬 설명 모달 -->
+<div class="modal-overlay hidden" id="skillDetailModal">
+  <div class="modal-content" id="modalContent">
+    <div class="modal-title" id="modalClassTitle">CLASS SKILLS</div>
+    <div id="modalSkillList"></div>
+    <button class="action-btn secondary" id="closeModalBtn" style="width:100%; margin-top:10px; padding:10px;">닫기</button>
+  </div>
 </div>
 
 <div class="overlay-screen hidden" id="screenSettings">
@@ -322,7 +943,26 @@
     <span class="setting-label" id="damageTextLabel">대미지 표시</span>
     <button class="setting-toggle-btn" id="toggleDamageTextBtn">ON</button>
   </div>
+  <div class="setting-item setting-range">
+    <span class="setting-label" id="soundVolumeLabel">사운드 볼륨</span>
+    <span class="slider-title" id="volumeTitle">볼륨</span>
+    <input type="range" id="sfxVolumeSlider" min="0" max="1" step="0.01" value="0.7">
+    <span class="range-value" id="soundVolumeValue">70%</span>
+  </div>
+  <div class="setting-item setting-range">
+    <span class="setting-label" id="uiScaleLabel">UI 크기</span>
+    <span class="slider-title" id="uiScaleTitle">크기</span>
+    <input type="range" id="uiScaleSlider" min="0.95" max="1.05" step="0.01" value="1">
+    <span class="range-value" id="uiScaleValue">100%</span>
+  </div>
+  <button class="action-btn secondary" id="openUiPreviewBtn">UI 미리보기</button>
   <button class="action-btn secondary" id="closeSettingsBtn">닫기</button>
+</div>
+
+<div class="modal-overlay hidden" id="uiPreviewModal">
+  <div class="modal-content ui-preview-modal">
+    <button class="action-btn secondary preview-exit-btn" id="closeUiPreviewBtn">나가기</button>
+  </div>
 </div>
 
 <div class="overlay-screen hidden" id="screenDifficulty">
@@ -371,7 +1011,7 @@
   </div>
   <div></div>
   <div class="hud-enemy-side">
-    <div class="name-tag">TARGET BOT</div>
+    <div class="name-tag" id="enemyTag">TARGET BOT</div>
     <div class="hp-bar-wrap">
       <div class="hp-bar-fill" id="enemyHpFill" style="width:100%"></div>
       <div class="hp-text" id="enemyHpText">100 / 100</div>
@@ -382,24 +1022,43 @@
 <div class="hud" id="hint">
   <span id="hudHint">WASD 이동 &nbsp;·&nbsp; 마우스 조준 &nbsp;·&nbsp; 좌클릭 공격 &nbsp;·&nbsp; Q 이동스킬 &nbsp;·&nbsp; E 특수스킬 &nbsp;·&nbsp; ESC 일시 정지</span>
 </div>
+<div class="hud" id="pauseHint">ESC로 일시 정지</div>
 
 <div class="hud" id="status"></div>
+
+<div class="hud mobile-controls" id="mobileControls">
+  <div class="mobile-stick" id="moveStick">
+    <div class="stick-base"></div>
+    <div class="stick-knob"></div>
+  </div>
+  <div class="mobile-stick attack-stick" id="attackStick">
+    <div class="stick-base"></div>
+    <div class="stick-knob"></div>
+    <div class="skill-buttons">
+      <div class="skill-stick q">Q</div>
+      <div class="skill-stick e">E</div>
+    </div>
+  </div>
+</div>
 
 <div class="hud" id="skillbar">
   <div class="skill-slot" id="slotBasic">
     <div class="key">LMB</div>
     <div class="label" id="labelBasic">공격</div>
     <div class="cooldown-overlay" id="cdBasic" style="height:0%"></div>
+    <div class="cooldown-text" id="cdTextBasic"></div>
   </div>
   <div class="skill-slot" id="slotQ">
     <div class="key">Q</div>
     <div class="label" id="labelQ">스킬</div>
     <div class="cooldown-overlay" id="cdQ" style="height:0%"></div>
+    <div class="cooldown-text" id="cdTextQ"></div>
   </div>
   <div class="skill-slot" id="slotE">
     <div class="key">E</div>
     <div class="label" id="labelE">특수스킬</div>
     <div class="cooldown-overlay" id="cdE" style="height:0%"></div>
+    <div class="cooldown-text" id="cdTextE"></div>
   </div>
 </div>
 
@@ -437,32 +1096,84 @@ canvas.addEventListener('mouseup', e => { if (e.button === 0) mouse.down = false
 // ---------- 클래스 고유 스킬 및 속성 정의 ----------
 const CLASSES = {
   striker: {
+    name: 'STRIKER',
     color: '#4fd6c4', glow: '#4fd6c480',
     maxHp: 100, moveSpeed: 260,
-    basicDmg: 9, basicSpeed: 620, basicCd: 0.35, basicHoming: 0,
+    basicDmg: 11, basicSpeed: 620, basicCd: 0.35, basicHoming: 0,
     qCd: 3.5, eCd: 6.0,
-    skills: { ko: { basic: '파동탄', q: '대시', e: '파열구' }, en: { basic: 'Pulse Shot', q: 'Dash', e: 'Burst' } }
+    skills: { ko: { basic: '파동탄', q: '대시', e: '파열구' }, en: { basic: 'Pulse Shot', q: 'Dash', e: 'Burst' } },
+    details: {
+      ko: {
+        basic: "파동탄: 직진하는 높은 속도의 투사체를 발사합니다. (데미지: 11)",
+        q: "대시: 지정한 방향으로 빠르게 돌진합니다. (쿨타임: 3.5초)",
+        e: "파열구: 주변 넓은 범위에 강력한 폭발을 일으킵니다. (데미지: 24, 쿨타임: 6초)"
+      },
+      en: {
+        basic: "Pulse Shot: Fires a fast linear projectile. (Damage: 11)",
+        q: "Dash: Rapidly dashes toward the target direction. (Cooldown: 3.5s)",
+        e: "Burst: Causes a large explosion around yourself. (Damage: 24, Cooldown: 6s)"
+      }
+    }
   },
   mage: {
+    name: 'ARCANE MAGE',
     color: '#a970e8', glow: '#a970e880',
     maxHp: 85, moveSpeed: 240,
-    basicDmg: 10, basicSpeed: 450, basicCd: 0.45, basicHoming: 0.6, // 평타 대미지 너프 (13 -> 10)
+    basicDmg: 7.5, basicSpeed: 450, basicCd: 0.45, basicHoming: 0.3,
     qCd: 5.0, eCd: 8.0,
-    skills: { ko: { basic: '유도 마탄', q: '점멸', e: '메테오' }, en: { basic: 'Arcane Bolt', q: 'Blink', e: 'Meteor' } }
+    skills: { ko: { basic: '유도 마탄', q: '점멸', e: '메테오' }, en: { basic: 'Arcane Bolt', q: 'Blink', e: 'Meteor' } },
+    details: {
+      ko: {
+        basic: "유도 마탄: 적을 향해 미세하게 유도되는 마탄을 발사합니다. (데미지: 7.5)",
+        q: "점멸: 지정 위치로 순간 이동합니다. (쿨타임: 5초)",
+        e: "메테오: 목표 위치에 1초 후 작고 강력한 운석을 떨어뜨립니다. (범위: 120, 데미지: 28, 쿨타임: 8초)"
+      },
+      en: {
+        basic: "Arcane Bolt: Fires a light homing bolt targeting the enemy. (Damage: 7.5)",
+        q: "Blink: Teleports instantaneously toward target location. (Cooldown: 5s)",
+        e: "Meteor: Calls down a compact meteor strike after 1s. (Radius: 120, Damage: 28, Cooldown: 8s)"
+      }
+    }
   },
   assassin: {
+    name: 'ASSASSIN',
     color: '#f2c744', glow: '#f2c74480',
     maxHp: 80, moveSpeed: 310,
-    basicDmg: 11, basicSpeed: 820, basicCd: 0.25, basicHoming: 0, // 평타 대미지 너프 (15 -> 11)
+    basicDmg: 8.5, basicSpeed: 820, basicCd: 0.25, basicHoming: 0,
     qCd: 2.8, eCd: 5.5,
-    skills: { ko: { basic: '암습', q: '그림자 도약', e: '칼날 연무' }, en: { basic: 'Shadow Strike', q: 'Shadow Leap', e: 'Blade Volley' } }
+    skills: { ko: { basic: '암습', q: '그림자 도약', e: '칼날 연무' }, en: { basic: 'Shadow Strike', q: 'Shadow Leap', e: 'Blade Volley' } },
+    details: {
+      ko: {
+        basic: "암습: 매우 빠른 속도의 암살용 칼날을 발사합니다. (데미지: 8.5)",
+        q: "그림자 도약: 적의 공격을 피해 순식간에 도약합니다. (쿨타임: 2.8초)",
+        e: "칼날 연무: 목표 방향으로 빠른 칼날 9개를 연속 난사합니다. (발당 데미지: 5, 쿨타임: 5.5초)"
+      },
+      en: {
+        basic: "Shadow Strike: Fires a high-speed blade projectile. (Damage: 8.5)",
+        q: "Shadow Leap: Instantly leaps away to dodge attacks. (Cooldown: 2.8s)",
+        e: "Blade Volley: Rapidly fires a barrage of 9 blades. (Damage/shot: 5, Cooldown: 5.5s)"
+      }
+    }
   },
   paladin: {
+    name: 'PALADIN',
     color: '#4ade80', glow: '#4ade8080',
     maxHp: 150, moveSpeed: 210,
     basicDmg: 11, basicSpeed: 500, basicCd: 0.55, basicHoming: 0,
     qCd: 4.0, eCd: 7.0,
-    skills: { ko: { basic: '강격', q: '방패 돌진', e: '성스러운 충격' }, en: { basic: 'Slam', q: 'Shield Charge', e: 'Holy Nova' } }
+    skills: { ko: { basic: '강격', q: '방패 돌진', e: '성스러운 충격' }, en: { basic: 'Slam', q: 'Shield Charge', e: 'Holy Nova' } },
+    details: {
+      ko: {
+        basic: "강격: 묵직한 충격 투사체를 발사합니다. (데미지: 11)",
+        q: "방패 돌진: 전방으로 돌진합니다. (쿨타임: 4초)",
+        e: "성스러운 충격: 주변에 강한 둔화/밀쳐내기 파동을 일으키고 대미지를 2회 무효화하는 보호막을 획득합니다. (데미지: 26, 쿨타임: 7초)"
+      },
+      en: {
+        basic: "Slam: Fires a heavy impact projectile. (Damage: 11)",
+        q: "Shield Charge: Charges forward rapidly. (Cooldown: 4s)",
+        e: "Holy Nova: Emits a knockback wave and gains a 2-stack invincibility shield. (Damage: 26, Cooldown: 7s)"
+      }
+    }
   }
 };
 
@@ -471,13 +1182,18 @@ let selectedClassKey = 'striker';
 function makeEntity(x, y, color, glow, radius) {
   return {
     x, y, radius, color, glow, hp: 100, maxHp: 100, alive: true,
+    classKey: 'striker',
+    angle: 0,
     dashUntil: 0, dashVx: 0, dashVy: 0, hitFlash: 0,
     slowUntil: 0, slowFactor: 1,
     knockbackVx: 0, knockbackVy: 0, knockbackDisplayUntil: 0,
-    shieldStacks: 0, // 팔라딘 2회 방어막 스택
+    shieldStacks: 0,
     eCharging: false, eChargeStart: 0,
     qCd: 0, eCd: 0,
-    rapidShotsLeft: 0, rapidShotTimer: 0
+    rapidShotsLeft: 0, rapidShotTimer: 0,
+    moveDirTimer: 0, moveDirAngle: 0,
+    openingTimer: 0, openingDirY: 0,
+    openingDashLockTimer: 0 // 오프닝 대시 사용 금지 타이머
   };
 }
 
@@ -486,13 +1202,210 @@ const bot = makeEntity(900, 400, '#e0554f', '#e0554f80', 16);
 
 const projectiles = [];
 const auras = [];
-const delayedMeteors = []; // 지연 발생 메테오
+const delayedMeteors = [];
 const floatingTexts = [];
 const particles = [];
 
 const cooldowns = { basic: { cur: 0, max: 0.35 }, q: { cur: 0, max: 3.5 }, e: { cur: 0, max: 6 } };
 
 let showDamageText = true;
+let sfxVolume = parseFloat(localStorage.getItem('pvpProtoSfxVol')) || 0.7;
+let uiScale = parseFloat(localStorage.getItem('pvpProtoUiScale')) || 1.0;
+let startLabelTimer = 0;
+let startLabelText = 'Me';
+let roundEnding = false;
+let lastHoverSfxTime = 0;
+
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playHoverSfx() {
+  const now = performance.now();
+  if (now - lastHoverSfxTime < 100) return;
+  lastHoverSfxTime = now;
+  playSfx('buttonHover');
+}
+
+function playSfx(kind) {
+  if (sfxVolume <= 0) return;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const now = audioCtx.currentTime;
+  const output = audioCtx.createGain();
+  output.gain.setValueAtTime(0.0001, now);
+  const filter = audioCtx.createBiquadFilter();
+  filter.Q.setValueAtTime(1.6, now);
+  const oscA = audioCtx.createOscillator();
+  const oscB = audioCtx.createOscillator();
+  let hasOscB = false;
+  let duration = 0.12;
+  let envelopePeak = Math.max(0.001, sfxVolume);
+  let filterFreq = 1200;
+  let filterType = 'lowpass';
+  let typeA = 'sine';
+  let typeB = 'triangle';
+  let noise = false;
+  let noiseGainLevel = 0;
+
+  switch (kind) {
+    case 'shoot':
+      typeA = 'square'; typeB = 'triangle';
+      oscA.frequency.setValueAtTime(780, now);
+      oscB.frequency.setValueAtTime(1140, now);
+      hasOscB = true;
+      duration = 0.14;
+      filterFreq = 2800;
+      filterType = 'highpass';
+      noise = true;
+      noiseGainLevel = 0.14;
+      break;
+    case 'enemyShoot':
+      typeA = 'triangle'; typeB = 'sawtooth';
+      oscA.frequency.setValueAtTime(520, now);
+      oscB.frequency.setValueAtTime(700, now);
+      hasOscB = true;
+      duration = 0.14;
+      filterFreq = 1900;
+      filterType = 'lowpass';
+      noise = true;
+      noiseGainLevel = 0.08;
+      break;
+    case 'hit':
+      typeA = 'triangle'; typeB = 'sawtooth';
+      oscA.frequency.setValueAtTime(260, now);
+      oscB.frequency.setValueAtTime(190, now);
+      hasOscB = true;
+      duration = 0.1;
+      filterFreq = 1100;
+      filterType = 'lowpass';
+      break;
+    case 'block':
+      typeA = 'square'; typeB = 'triangle';
+      oscA.frequency.setValueAtTime(180, now);
+      oscB.frequency.setValueAtTime(120, now);
+      hasOscB = true;
+      duration = 0.12;
+      filterFreq = 1000;
+      filterType = 'lowpass';
+      break;
+    case 'burst':
+      typeA = 'triangle'; typeB = 'sine';
+      oscA.frequency.setValueAtTime(430, now);
+      oscB.frequency.setValueAtTime(330, now);
+      hasOscB = true;
+      duration = 0.22;
+      filterFreq = 1400;
+      filterType = 'bandpass';
+      noise = true;
+      noiseGainLevel = 0.1;
+      break;
+    case 'dash':
+      typeA = 'square'; typeB = 'triangle';
+      oscA.frequency.setValueAtTime(640, now);
+      oscB.frequency.setValueAtTime(520, now);
+      hasOscB = true;
+      duration = 0.12;
+      filterFreq = 2200;
+      filterType = 'bandpass';
+      break;
+    case 'start':
+      typeA = 'triangle'; typeB = 'sine';
+      oscA.frequency.setValueAtTime(760, now);
+      oscB.frequency.setValueAtTime(1000, now);
+      hasOscB = true;
+      duration = 0.18;
+      filterFreq = 2300;
+      filterType = 'lowpass';
+      noise = true;
+      noiseGainLevel = 0.1;
+      break;
+    case 'victory':
+      typeA = 'triangle'; typeB = 'sine';
+      oscA.frequency.setValueAtTime(780, now);
+      oscB.frequency.setValueAtTime(1180, now);
+      hasOscB = true;
+      duration = 0.50;
+      envelopePeak = Math.max(0.001, sfxVolume) * 1.2;
+      filterFreq = 2200;
+      filterType = 'lowpass';
+      noise = true;
+      noiseGainLevel = 0.18;
+      break;
+    case 'defeat':
+      typeA = 'square'; typeB = 'triangle';
+      oscA.frequency.setValueAtTime(260, now);
+      oscB.frequency.setValueAtTime(170, now);
+      hasOscB = true;
+      duration = 0.45;
+      envelopePeak = Math.max(0.001, sfxVolume) * 0.95;
+      filterFreq = 900;
+      filterType = 'lowpass';
+      noise = true;
+      noiseGainLevel = 0.14;
+      break;
+    case 'buttonClick':
+      typeA = 'square'; typeB = 'triangle';
+      oscA.frequency.setValueAtTime(1450, now);
+      oscB.frequency.setValueAtTime(1680, now);
+      hasOscB = true;
+      duration = 0.07;
+      filterFreq = 3400;
+      filterType = 'highpass';
+      noise = true;
+      noiseGainLevel = 0.25;
+      break;
+    case 'buttonHover':
+      typeA = 'sine'; typeB = 'triangle';
+      oscA.frequency.setValueAtTime(1600, now);
+      oscB.frequency.setValueAtTime(1320, now);
+      hasOscB = true;
+      duration = 0.06;
+      filterFreq = 3800;
+      filterType = 'highpass';
+      noise = true;
+      noiseGainLevel = 0.16;
+      break;
+    default:
+      typeA = 'sine';
+      oscA.frequency.setValueAtTime(440, now);
+      duration = 0.12;
+      filterFreq = 1500;
+      filterType = 'lowpass';
+  }
+
+  oscA.type = typeA;
+  oscA.connect(filter);
+  if (hasOscB) {
+    oscB.type = typeB;
+    oscB.connect(filter);
+  }
+
+  filter.type = filterType;
+  filter.frequency.setValueAtTime(filterFreq, now);
+  filter.connect(output);
+  output.connect(audioCtx.destination);
+
+  if (noise) {
+    const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * duration, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+    }
+    const noiseSource = audioCtx.createBufferSource();
+    noiseSource.buffer = buffer;
+    const ng = audioCtx.createGain();
+    ng.gain.setValueAtTime(noiseGainLevel * sfxVolume, now);
+    noiseSource.connect(ng).connect(output);
+    noiseSource.start(now);
+    noiseSource.stop(now + duration);
+  }
+
+  output.gain.setValueAtTime(0.0001, now);
+  output.gain.exponentialRampToValueAtTime(envelopePeak, now + 0.006);
+  output.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+  oscA.start(now);
+  if (hasOscB) oscB.start(now);
+  oscA.stop(now + duration);
+  if (hasOscB) oscB.stop(now + duration);
+}
 
 // ---------- 다국어 (i18n) ----------
 const I18N = {
@@ -500,12 +1413,14 @@ const I18N = {
     lobbySub: '전장에 참여하여 승리하세요',
     startBtn: '전투 시작', selectClassBtn: '클래스 선택', settingsBtn: '설정',
     classTitle: 'CLASS SELECT', classSub: '전투에 사용할 클래스를 선택하세요', confirmBtn: '확인',
-    cNameStriker: 'STRIKER', cDescStriker: '균형 잡힌 원거리 투사체 공격과 대시, 파열구 범위 기술을 사용합니다.',
-    cNameMage: 'ARCANE MAGE', cDescMage: '유도 탄환과 점멸, 마우스 위치에 1초 뒤 낙하하는 메테오를 사용합니다.',
-    cNameAssassin: 'ASSASSIN', cDescAssassin: '그림자 도약 후, 마우스 방향으로 빠른 암살용 칼날 탄환들을 난사합니다.',
-    cNamePaladin: 'PALADIN', cDescPaladin: '근접 충격파 발사 후 대미지를 2회 막아주는 성스러운 보호막을 획득합니다.',
-    settingsTitle: 'SETTINGS', settingsSub: '게임 설정을 변경할 수 있습니다',
+      cNameStriker: '스트라이커', cDescStriker: '균형 잡힌 원거리 투사체 공격과 대시, 파열구 범위 기술을 사용합니다.',
+    cNameMage: '아케인 메이지', cDescMage: '약한 유도 탄환과 점멸, 마우스 위치에 1초 뒤 낙하하는 메테오를 사용합니다.',
+    cNameAssassin: '어쌔신', cDescAssassin: '그림자 도약 후, 마우스 방향으로 빠른 암살용 칼날 탄환들을 난사합니다.',
+    cNamePaladin: '팔라딘', cDescPaladin: '근접 충격파 발사 후 대미지를 2회 막아주는 성스러운 보호막을 획득합니다.',
+    playerTag: '나', enemyTagPrefix: '봇 (', settingsTitle: 'SETTINGS', settingsSub: '게임 설정을 변경할 수 있습니다',
     damageTextLabel: '대미지 표시', toggleOn: 'ON', toggleOff: 'OFF', closeBtn: '닫기',
+    soundVolumeLabel: '사운드 볼륨', sliderTitle: '볼륨', uiScaleLabel: 'UI 크기', uiScaleTitle: '크기', uiPreviewBtn: 'UI 미리보기', leavePreviewBtn: '나가기',
+    skillDetailBtn: '스킬 설명',
     diffTitle: '난이도 선택', diffSub: '상대의 속도 · 공격 빈도 · 스킬 사용을 결정해요',
     diffEasy: '쉬움', diffNormal: '보통', diffHard: '어려움', diffNightmare: '악몽', backBtn: '뒤로가기',
     pausedTitle: 'PAUSED', pausedSub: '게임이 일시 정지되었습니다',
@@ -523,8 +1438,11 @@ const I18N = {
     cNameMage: 'ARCANE MAGE', cDescMage: 'Light homing bolts, instantaneous blink, and delayed targeted meteor strike.',
     cNameAssassin: 'ASSASSIN', cDescAssassin: 'High mobility shadow leap and rapid directional blade projectile barrage.',
     cNamePaladin: 'PALADIN', cDescPaladin: 'Close-range holy burst with a 2-stack invincibility shield after cast.',
-    settingsTitle: 'SETTINGS', settingsSub: 'Change your game settings',
+    playerTag: 'YOU', enemyTagPrefix: 'BOT (', settingsTitle: 'SETTINGS', settingsSub: 'Change your game settings',
     damageTextLabel: 'Damage Numbers', toggleOn: 'ON', toggleOff: 'OFF', closeBtn: 'Close',
+    soundVolumeLabel: 'Sound Volume', sliderTitle: 'VOLUME', uiScaleLabel: 'UI SIZE', uiScaleTitle: 'SIZE',
+    uiPreviewBtn: 'UI PREVIEW', leavePreviewBtn: 'EXIT PREVIEW',
+    skillDetailBtn: 'SKILL INFO',
     diffTitle: 'SELECT DIFFICULTY', diffSub: "Determines opponent's speed, attack frequency, and skill behavior",
     diffEasy: 'EASY', diffNormal: 'NORMAL', diffHard: 'HARD', diffNightmare: 'NIGHTMARE', backBtn: 'Back',
     pausedTitle: 'PAUSED', pausedSub: 'The game is paused',
@@ -538,6 +1456,12 @@ const I18N = {
 
 let currentLang = localStorage.getItem('pvpProtoLang') || 'ko';
 let lastResultKind = null;
+
+function getLocalizedClassName(classKey) {
+  const capitalized = classKey.charAt(0).toUpperCase() + classKey.slice(1);
+  const key = `cName${capitalized}`;
+  return I18N[currentLang][key] || CLASSES[classKey].name;
+}
 
 function applyLanguage(lang) {
   currentLang = lang;
@@ -561,10 +1485,17 @@ function applyLanguage(lang) {
   document.getElementById('cDescAssassin').textContent = t.cDescAssassin;
   document.getElementById('cNamePaladin').textContent = t.cNamePaladin;
   document.getElementById('cDescPaladin').textContent = t.cDescPaladin;
+  document.querySelectorAll('.skill-detail-btn').forEach(btn => btn.textContent = t.skillDetailBtn);
 
   document.getElementById('settingsTitle').textContent = t.settingsTitle;
   document.getElementById('settingsSub').textContent = t.settingsSub;
   document.getElementById('damageTextLabel').textContent = t.damageTextLabel;
+  document.getElementById('soundVolumeLabel').textContent = t.soundVolumeLabel;
+  document.getElementById('volumeTitle').textContent = t.sliderTitle;
+  document.getElementById('uiScaleLabel').textContent = t.uiScaleLabel;
+  document.getElementById('uiScaleTitle').textContent = t.uiScaleTitle;
+  document.getElementById('openUiPreviewBtn').textContent = t.uiPreviewBtn;
+  document.getElementById('closeUiPreviewBtn').textContent = t.leavePreviewBtn;
   toggleDamageTextBtn.textContent = showDamageText ? t.toggleOn : t.toggleOff;
   document.getElementById('closeSettingsBtn').textContent = t.closeBtn;
 
@@ -586,6 +1517,9 @@ function applyLanguage(lang) {
   document.getElementById('toLobbyBtn').textContent = t.toLobbyBtn;
 
   document.getElementById('hudHint').innerHTML = t.hudHint;
+  document.getElementById('playerTag').textContent = t.playerTag;
+  const enemyLabel = `${t.enemyTagPrefix}${getLocalizedClassName(bot.classKey)})`;
+  document.getElementById('enemyTag').textContent = enemyLabel;
 
   const cls = CLASSES[selectedClassKey];
   document.getElementById('labelBasic').textContent = cls.skills[lang].basic;
@@ -612,7 +1546,8 @@ function applyClassAccent() {
   document.documentElement.style.setProperty('--class-accent', CLASSES[selectedClassKey].color);
 }
 document.querySelectorAll('.class-card').forEach(card => {
-  card.addEventListener('click', () => {
+  card.addEventListener('click', (e) => {
+    if(e.target.classList.contains('skill-detail-btn')) return;
     document.querySelectorAll('.class-card').forEach(c => c.classList.remove('active'));
     card.classList.add('active');
     selectedClassKey = card.dataset.class;
@@ -620,13 +1555,57 @@ document.querySelectorAll('.class-card').forEach(card => {
     applyLanguage(currentLang);
   });
 });
+
+// 스킬 설명 모달 기능
+document.querySelectorAll('.skill-detail-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const classKey = btn.dataset.classDetail;
+    openSkillDetailModal(classKey);
+  });
+});
+
+function openSkillDetailModal(classKey) {
+  const cls = CLASSES[classKey];
+  const lang = currentLang;
+  const modal = document.getElementById('skillDetailModal');
+  const modalContent = document.getElementById('modalContent');
+  const modalTitle = document.getElementById('modalClassTitle');
+  const modalList = document.getElementById('modalSkillList');
+
+  modalContent.style.borderColor = cls.color;
+  modalTitle.textContent = `${cls.skills[lang].basic} / ${cls.skills[lang].q} / ${cls.skills[lang].e}`;
+  modalTitle.style.color = cls.color;
+
+  const details = cls.details[lang];
+  modalList.innerHTML = `
+    <div class="modal-skill-item">
+      <div class="modal-skill-name" style="color:${cls.color}">[LMB] ${cls.skills[lang].basic}</div>
+      <div class="modal-skill-desc">${details.basic}</div>
+    </div>
+    <div class="modal-skill-item">
+      <div class="modal-skill-name" style="color:${cls.color}">[Q] ${cls.skills[lang].q}</div>
+      <div class="modal-skill-desc">${details.q}</div>
+    </div>
+    <div class="modal-skill-item">
+      <div class="modal-skill-name" style="color:${cls.color}">[E] ${cls.skills[lang].e}</div>
+      <div class="modal-skill-desc">${details.e}</div>
+    </div>
+  `;
+  modal.classList.remove('hidden');
+}
+
+document.getElementById('closeModalBtn').addEventListener('click', () => {
+  document.getElementById('skillDetailModal').classList.add('hidden');
+});
+
 applyClassAccent();
 
 const DIFFICULTY = {
-  easy:      { speedMult: 0.85, shootMin: 1.5,  shootMax: 2.1,  dmgMult: 0.8,  qCooldown: 6.5, eCooldown: 11,  homing: 0.4 },
-  normal:    { speedMult: 1.05, shootMin: 1.15, shootMax: 1.7,  dmgMult: 1.0,  qCooldown: 4.5, eCooldown: 7.5, homing: 1.2 },
-  hard:      { speedMult: 1.35, shootMin: 0.60, shootMax: 0.9,  dmgMult: 1.3,  qCooldown: 2.5, eCooldown: 4.5, homing: 1.8 },
-  nightmare: { speedMult: 1.50, shootMin: 0.50, shootMax: 0.8,  dmgMult: 1.6,  qCooldown: 1.4, eCooldown: 3.0, homing: 2.4 }
+  easy:      { speedMult: 1.00, shootMin: 1.25,  shootMax: 1.75, dmgMult: 1.00, qCooldown: 5.5, eCooldown: 9.0, homing: 0.38 },
+  normal:    { speedMult: 1.25, shootMin: 0.95, shootMax: 1.35, dmgMult: 1.18, qCooldown: 3.8, eCooldown: 6.2, homing: 0.72 },
+  hard:      { speedMult: 1.55, shootMin: 0.50, shootMax: 0.80, dmgMult: 1.45, qCooldown: 2.1, eCooldown: 3.8, homing: 1.05 },
+  nightmare: { speedMult: 1.80, shootMin: 0.40, shootMax: 0.70, dmgMult: 1.9, qCooldown: 1.0, eCooldown: 2.3, homing: 1.4 }
 };
 let difficultyKey = 'normal';
 let currentDifficulty = DIFFICULTY[difficultyKey];
@@ -652,30 +1631,47 @@ function hideAllScreens() {
   screenResult.classList.add('hidden');
 }
 
+function hidePreviewModal() {
+  previewMode = false;
+  document.body.classList.remove('preview-mode');
+  if (typeof uiPreviewModal !== 'undefined') {
+    uiPreviewModal.classList.add('hidden');
+  }
+}
+
 function showMainScreen() {
+  hidePreviewModal();
   gameState = 'lobby';
   hideAllScreens();
   screenMain.classList.remove('hidden');
+  document.body.classList.remove('show-hud');
 }
 
 function showClassSelectScreen() {
+  hidePreviewModal();
   hideAllScreens();
   screenClassSelect.classList.remove('hidden');
+  document.body.classList.remove('show-hud');
 }
 
 function showSettingsScreen() {
+  hidePreviewModal();
   hideAllScreens();
   screenSettings.classList.remove('hidden');
+  document.body.classList.remove('show-hud');
 }
 
 function showDifficultyScreen() {
+  hidePreviewModal();
   gameState = 'lobby';
   hideAllScreens();
   screenDifficulty.classList.remove('hidden');
+  document.body.classList.remove('show-hud');
 }
 
 function pauseGame() {
   if (gameState !== 'playing') return;
+  hidePreviewModal();
   gameState = 'paused';
   hideAllScreens();
   screenPause.classList.remove('hidden');
@@ -683,12 +1679,15 @@ function pauseGame() {
 
 function resumeGame() {
   if (gameState !== 'paused') return;
+  hidePreviewModal();
   gameState = 'playing';
   hideAllScreens();
   lastTime = performance.now();
+  document.body.classList.add('show-hud');
 }
 
 function showResultScreen(title, text, resultClass) {
+  hidePreviewModal();
   gameState = 'lobby';
   resultTitleEl.textContent = title;
   resultTitleEl.style.color = resultClass === 'win' ? 'var(--accent-player)' : 'var(--accent-enemy)';
@@ -720,6 +1719,116 @@ toggleDamageTextBtn.addEventListener('click', () => {
   toggleDamageTextBtn.classList.toggle('off', !showDamageText);
 });
 
+const sfxVolumeSlider = document.getElementById('sfxVolumeSlider');
+const sfxVolumeValue = document.getElementById('soundVolumeValue');
+const uiScaleSlider = document.getElementById('uiScaleSlider');
+const uiScaleValue = document.getElementById('uiScaleValue');
+let previewMode = false;
+function updateSfxDisplay() {
+  sfxVolume = parseFloat(sfxVolumeSlider.value);
+  localStorage.setItem('pvpProtoSfxVol', sfxVolume.toString());
+  sfxVolumeValue.textContent = `${Math.round(sfxVolume * 100)}%`;
+}
+function updateUiScaleDisplay() {
+  uiScale = parseFloat(uiScaleSlider.value);
+  localStorage.setItem('pvpProtoUiScale', uiScale.toString());
+  uiScaleValue.textContent = `${Math.round(uiScale * 100)}%`;
+  document.documentElement.style.setProperty('--ui-scale', uiScale.toString());
+}
+function updatePreviewHud() {
+  const pHpNorm = Math.max(0, player.hp / player.maxHp);
+  const eHpNorm = Math.max(0, bot.hp / bot.maxHp);
+  document.getElementById('playerHpFill').style.width = `${pHpNorm * 100}%`;
+  document.getElementById('enemyHpFill').style.width = `${eHpNorm * 100}%`;
+  document.getElementById('playerHpText').textContent = `${player.hp.toFixed(1)} / ${player.maxHp.toFixed(1)}`;
+  document.getElementById('enemyHpText').textContent = `${bot.hp.toFixed(1)} / ${bot.maxHp.toFixed(1)}`;
+  document.getElementById('cdBasic').style.height = `${(cooldowns.basic.cur / cooldowns.basic.max) * 100}%`;
+  document.getElementById('cdQ').style.height = `${(cooldowns.q.cur / cooldowns.q.max) * 100}%`;
+  document.getElementById('cdE').style.height = `${(cooldowns.e.cur / cooldowns.e.max) * 100}%`;
+  document.getElementById('cdTextBasic').textContent = cooldowns.basic.cur > 0 ? `${cooldowns.basic.cur.toFixed(1)}s` : '';
+  document.getElementById('cdTextQ').textContent = cooldowns.q.cur > 0 ? `${cooldowns.q.cur.toFixed(1)}s` : '';
+  document.getElementById('cdTextE').textContent = cooldowns.e.cur > 0 ? `${cooldowns.e.cur.toFixed(1)}s` : '';
+  document.getElementById('slotQ').classList.toggle('charging', player.eCharging);
+  let chips = '';
+  const nowT = now_ms();
+  if (player.shieldStacks > 0) chips += `<span class="effect-chip shield">SHIELD (${player.shieldStacks})</span>`;
+  if (nowT < player.slowUntil) chips += `<span class="effect-chip slow">SLOW</span>`;
+  if (nowT < player.knockbackDisplayUntil) chips += `<span class="effect-chip knockback">KNOCKBACK</span>`;
+  document.getElementById('playerEffects').innerHTML = chips;
+}
+function enterPreviewMode() {
+  previewMode = true;
+  gameState = 'preview';
+  hideAllScreens();
+  document.body.classList.add('show-hud', 'preview-mode');
+  updatePreviewHud();
+  uiPreviewModal.classList.remove('hidden');
+}
+function exitPreviewMode() {
+  hidePreviewModal();
+  gameState = 'lobby';
+  document.body.classList.remove('show-hud');
+  showSettingsScreen();
+}
+
+const openUiPreviewBtn = document.getElementById('openUiPreviewBtn');
+const uiPreviewModal = document.getElementById('uiPreviewModal');
+const closeUiPreviewBtn = document.getElementById('closeUiPreviewBtn');
+
+openUiPreviewBtn.addEventListener('click', enterPreviewMode);
+closeUiPreviewBtn.addEventListener('click', exitPreviewMode);
+
+uiPreviewModal.addEventListener('click', (e) => {
+  if (e.target === uiPreviewModal) {
+    exitPreviewMode();
+  }
+});
+sfxVolumeSlider.value = sfxVolume.toString();
+uiScaleSlider.value = uiScale.toString();
+sfxVolumeSlider.addEventListener('input', updateSfxDisplay);
+uiScaleSlider.addEventListener('input', updateUiScaleDisplay);
+sfxVolumeSlider.addEventListener('mouseenter', () => playSfx('buttonHover'));
+uiScaleSlider.addEventListener('mouseenter', () => playSfx('buttonHover'));
+updateSfxDisplay();
+updateUiScaleDisplay();
+
+function unlockAudio() {
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+document.body.addEventListener('pointerdown', unlockAudio, { once: true });
+document.body.addEventListener('pointermove', unlockAudio, { once: true });
+document.body.addEventListener('keydown', unlockAudio, { once: true });
+
+document.querySelectorAll('button').forEach(element => {
+  if (element.closest('.class-card')) {
+    element.addEventListener('pointerdown', () => {
+      unlockAudio();
+      playSfx('buttonClick');
+    });
+  } else {
+    element.addEventListener('pointerenter', () => {
+      unlockAudio();
+      playSfx('buttonHover');
+    });
+    element.addEventListener('pointerdown', () => {
+      unlockAudio();
+      playSfx('buttonClick');
+    });
+  }
+});
+
+document.querySelectorAll('.class-card').forEach(card => {
+  card.addEventListener('pointerenter', () => {
+    unlockAudio();
+    playHoverSfx();
+  });
+  card.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('button')) return;
+    unlockAudio();
+    playSfx('buttonClick');
+  });
+});
+
 document.getElementById('confirmStartBtn').addEventListener('click', startMatch);
 document.getElementById('resumeBtn').addEventListener('click', resumeGame);
 document.getElementById('pauseToLobbyBtn').addEventListener('click', showMainScreen);
@@ -735,11 +1844,25 @@ document.querySelectorAll('.diff-btn').forEach(btn => {
 });
 
 function startMatch() {
+  hidePreviewModal();
   currentDifficulty = DIFFICULTY[difficultyKey];
   resetRound();
+  previewMode = false;
+  gameState = 'playing';
+  hideAllScreens();
+  document.body.classList.add('show-hud');
+  lastTime = performance.now();
+  startLabelTimer = 2.0;
+  startLabelText = currentLang === 'ko' ? '나' : 'Me';
+  playSfx('start');
+}
+
+function resumeGame() {
+  if (gameState !== 'paused') return;
   gameState = 'playing';
   hideAllScreens();
   lastTime = performance.now();
+  document.body.classList.add('show-hud');
 }
 
 function showStatus(text, color) {
@@ -754,21 +1877,32 @@ function dist(ax, ay, bx, by) { return Math.hypot(ax - bx, ay - by); }
 function now_ms() { return performance.now(); }
 
 function resetEntityState(e, x, y, isPlayer) {
+  let classKey = selectedClassKey;
+  if (!isPlayer) {
+    // 상대방 Bot 클래스를 무작위로 선택
+    const classKeys = Object.keys(CLASSES);
+    classKey = classKeys[Math.floor(Math.random() * classKeys.length)];
+  }
+
+  const cls = CLASSES[classKey];
+  e.classKey = classKey;
+  e.maxHp = cls.maxHp;
+  e.hp = cls.maxHp;
+  e.color = cls.color;
+  e.glow = cls.glow;
+
   if (isPlayer) {
-    const cls = CLASSES[selectedClassKey];
-    e.maxHp = cls.maxHp;
-    e.hp = cls.maxHp;
-    e.color = cls.color;
-    e.glow = cls.glow;
     cooldowns.basic.max = cls.basicCd;
     cooldowns.q.max = cls.qCd;
     cooldowns.e.max = cls.eCd;
   } else {
-    e.maxHp = 100;
-    e.hp = 100;
+    const enemyLabel = `${I18N[currentLang].enemyTagPrefix}${getLocalizedClassName(classKey)})`;
+    document.getElementById('enemyTag').textContent = enemyLabel;
   }
+
   e.alive = true;
   e.x = x; e.y = y;
+  e.angle = 0;
   e.dashUntil = 0; e.dashVx = 0; e.dashVy = 0; e.hitFlash = 0;
   e.slowUntil = 0; e.slowFactor = 1;
   e.knockbackVx = 0; e.knockbackVy = 0; e.knockbackDisplayUntil = 0;
@@ -776,6 +1910,12 @@ function resetEntityState(e, x, y, isPlayer) {
   e.eCharging = false; e.eChargeStart = 0;
   e.qCd = 0; e.eCd = 0;
   e.rapidShotsLeft = 0; e.rapidShotTimer = 0;
+  e.moveDirTimer = 0; e.moveDirAngle = 0;
+  
+  // 시작 직후 즉시 대시 방지용 락 (2.5초 ~ 3.5초)
+  e.openingTimer = 2.0 + Math.random() * 1.5;
+  e.openingDirY = Math.random() < 0.5 ? -1 : 1;
+  e.openingDashLockTimer = 2.5 + Math.random() * 1.0;
 }
 
 function resetRound() {
@@ -788,6 +1928,7 @@ function resetRound() {
   particles.length = 0;
   botShootTimer = 0.8;
   cooldowns.basic.cur = 0; cooldowns.q.cur = 0; cooldowns.e.cur = 0;
+  roundEnding = false;
 }
 
 function fireProjectile(from, tx, ty, color, dmg, owner, speed, homing, type = 'normal') {
@@ -804,70 +1945,72 @@ function fireProjectile(from, tx, ty, color, dmg, owner, speed, homing, type = '
     homing: homing || 0,
     type: type
   });
+
+  if (owner === 'player') playSfx('shoot');
+  else playSfx('enemyShoot');
 }
 
-function useQSkill() {
-  const cls = CLASSES[selectedClassKey];
-  if (selectedClassKey === 'mage') {
-    const dx = mouse.x - player.x, dy = mouse.y - player.y;
-    const len = Math.hypot(dx, dy) || 1;
+function useQSkill(caster, targetX, targetY, owner) {
+  const cls = CLASSES[caster.classKey];
+  const dx = targetX - caster.x, dy = targetY - caster.y;
+  const len = Math.hypot(dx, dy) || 1;
+
+  if (caster.classKey === 'mage') {
     const blinkDist = Math.min(len, 300);
-    player.x += (dx / len) * blinkDist;
-    player.y += (dy / len) * blinkDist;
-    player.x = Math.max(20, Math.min(canvas.width - 20, player.x));
-    player.y = Math.max(20, Math.min(canvas.height - 20, player.y));
-    spawnDeathParticles(player.x, player.y, cls.color);
-    cooldowns.q.cur = cooldowns.q.max;
-  } else if (selectedClassKey === 'assassin') {
-    const dx = mouse.x - player.x, dy = mouse.y - player.y;
-    const len = Math.hypot(dx, dy) || 1;
-    player.x += (dx / len) * 260;
-    player.y += (dy / len) * 260;
-    player.x = Math.max(20, Math.min(canvas.width - 20, player.x));
-    player.y = Math.max(20, Math.min(canvas.height - 20, player.y));
-    spawnDeathParticles(player.x, player.y, cls.color);
-    cooldowns.q.cur = cooldowns.q.max;
+    caster.x += (dx / len) * blinkDist;
+    caster.y += (dy / len) * blinkDist;
+    caster.x = Math.max(20, Math.min(canvas.width - 20, caster.x));
+    caster.y = Math.max(20, Math.min(canvas.height - 20, caster.y));
+    spawnDeathParticles(caster.x, caster.y, cls.color);
+  } else if (caster.classKey === 'assassin') {
+    caster.x += (dx / len) * 260;
+    caster.y += (dy / len) * 260;
+    caster.x = Math.max(20, Math.min(canvas.width - 20, caster.x));
+    caster.y = Math.max(20, Math.min(canvas.height - 20, caster.y));
+    spawnDeathParticles(caster.x, caster.y, cls.color);
   } else {
-    const dx = mouse.x - player.x, dy = mouse.y - player.y;
-    const len = Math.hypot(dx, dy) || 1;
-    const dashSpeed = selectedClassKey === 'paladin' ? 1400 : 1700;
-    player.dashVx = (dx / len) * dashSpeed;
-    player.dashVy = (dy / len) * dashSpeed;
-    player.dashUntil = now_ms() + 200;
+    const dashSpeed = caster.classKey === 'paladin' ? 1400 : 1700;
+    caster.dashVx = (dx / len) * dashSpeed;
+    caster.dashVy = (dy / len) * dashSpeed;
+    caster.dashUntil = now_ms() + 200;
+  }
+
+  if (owner === 'player') {
     cooldowns.q.cur = cooldowns.q.max;
+    playSfx('dash');
+  } else {
+    caster.qCd = currentDifficulty.qCooldown;
   }
 }
 
-// 특수스킬 (E)
-function castBurst(caster, owner) {
-  if (owner === 'player') {
-    if (selectedClassKey === 'mage') {
-      // 메테오: 마우스 위치에 1초(1.0s) 지연 폭발 오라 등록
-      delayedMeteors.push({
-        x: mouse.x,
-        y: mouse.y,
-        delay: 1.0,
-        maxDelay: 1.0,
-        radius: 180,
-        dmg: 38,
-        owner: 'player'
-      });
-      return;
-    } else if (selectedClassKey === 'assassin') {
-      // 어쌔신: 칼날 연무 (발당 대미지 3.5 너프)
-      caster.rapidShotsLeft = 12;
-      caster.rapidShotTimer = 0;
-      return; 
-    } else if (selectedClassKey === 'paladin') {
-      // 팔라딘: 근접 충격파 + 보호막 2회 무효화 부여
-      auras.push({ x: caster.x, y: caster.y, r: 0, maxR: 110, dmg: 26, life: 0.35, dealt: false, owner });
-      caster.shieldStacks = 2;
-      return;
-    }
+function castBurst(caster, owner, targetX, targetY) {
+  if (caster.classKey === 'mage') {
+    delayedMeteors.push({
+      x: targetX,
+      y: targetY,
+      delay: 0.7,
+      maxDelay: 0.7,
+      radius: 120,
+      dmg: 28,
+      owner
+    });
+  } else if (caster.classKey === 'assassin') {
+    caster.rapidShotsLeft = 9;
+    caster.rapidShotTimer = 0;
+  } else if (caster.classKey === 'paladin') {
+    auras.push({ x: caster.x, y: caster.y, r: 0, maxR: 110, dmg: 26, life: 0.35, dealt: false, owner });
+    caster.shieldStacks = 2;
+  } else {
+    auras.push({ x: caster.x, y: caster.y, r: 0, maxR: 210, dmg: 24, life: 0.35, dealt: false, owner });
   }
 
-  // 기본 스트라이커 및 BOT 공통
-  auras.push({ x: caster.x, y: caster.y, r: 0, maxR: 210, dmg: 24, life: 0.35, dealt: false, owner });
+  if (owner === 'player') {
+    cooldowns.e.cur = cooldowns.e.max;
+    playSfx('burst');
+  } else {
+    caster.eCd = currentDifficulty.eCooldown;
+    playSfx('burst');
+  }
 }
 
 function startCharging() {
@@ -881,8 +2024,7 @@ function releaseCharge() {
   if (!player.eCharging) return;
   player.eCharging = false;
   if (gameState === 'playing' && player.alive) {
-    castBurst(player, 'player');
-    cooldowns.e.cur = cooldowns.e.max;
+    castBurst(player, 'player', mouse.x, mouse.y);
   }
 }
 
@@ -890,15 +2032,16 @@ function applyEffectsFromBurst(target, sourceX, sourceY, owner) {
   const dx = target.x - sourceX, dy = target.y - sourceY;
   const len = Math.hypot(dx, dy) || 1;
 
-  const isPlayerPaladinCast = owner === 'player' && selectedClassKey === 'paladin';
-  const power = isPlayerPaladinCast ? 1300 : 780;
-  const slowDur = isPlayerPaladinCast ? 4500 : 3000;
+  const casterClass = owner === 'player' ? selectedClassKey : bot.classKey;
+  const isPaladinCast = casterClass === 'paladin';
+  const power = isPaladinCast ? 1300 : 780;
+  const slowDur = isPaladinCast ? 4500 : 3000;
 
   target.knockbackVx = (dx / len) * power;
   target.knockbackVy = (dy / len) * power;
   target.knockbackDisplayUntil = now_ms() + 500;
   target.slowUntil = now_ms() + slowDur;
-  target.slowFactor = isPlayerPaladinCast ? 0.3 : 0.45;
+  target.slowFactor = isPaladinCast ? 0.3 : 0.45;
 }
 
 function spawnDamageText(x, y, text, color = '#f2b544') {
@@ -929,41 +2072,43 @@ function spawnDeathParticles(x, y, color) {
 }
 
 function applyDamage(target, dmg, sourceOwner) {
-  if (!target.alive) return;
+  if (!target.alive || roundEnding) return;
 
-  // 팔라딘 2회 방어막 판정
   if (target.shieldStacks > 0) {
     target.shieldStacks--;
     spawnDamageText(target.x, target.y - target.radius, 'BLOCKED!', '#38bdf8');
     spawnDeathParticles(target.x, target.y, '#38bdf8');
+    playSfx('block');
     return;
   }
 
   target.hp -= dmg;
   target.hitFlash = 0.15;
-
-  spawnDamageText(target.x, target.y - target.radius, '-' + Math.round(dmg));
+  playSfx('hit');
+  spawnDamageText(target.x, target.y - target.radius, '-' + dmg.toFixed(1));
 
   if (target.hp <= 0) {
     target.hp = 0;
     target.alive = false;
-    spawnDeathParticles(target.x, target.y, target.color);
-
+      roundEnding = true;
     if (sourceOwner === 'player') {
       lastResultKind = 'win';
+      playSfx('victory');
       showStatus(I18N[currentLang].statusVictory, '#4fd6c4');
       setTimeout(() => showResultScreen(I18N[currentLang].resultVictoryTitle, I18N[currentLang].resultVictoryText, 'win'), 1400);
     } else {
       lastResultKind = 'lose';
+      playSfx('defeat');
       showStatus(I18N[currentLang].statusDefeat, '#e0554f');
       setTimeout(() => showResultScreen(I18N[currentLang].resultDefeatTitle, I18N[currentLang].resultDefeatText, 'lose'), 1400);
     }
   }
 }
 
-function currentMoveSpeed(entity, baseSpeed) {
+function currentMoveSpeed(entity) {
+  const cls = CLASSES[entity.classKey];
   const slowed = now_ms() < entity.slowUntil;
-  return baseSpeed * (slowed ? entity.slowFactor : 1);
+  return cls.moveSpeed * (slowed ? entity.slowFactor : 1);
 }
 
 function applyKnockback(entity, dt) {
@@ -987,6 +2132,17 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 
+function updateEntityRapidShots(entity, targetX, targetY, owner, dt) {
+  if (entity.alive && entity.rapidShotsLeft > 0) {
+    entity.rapidShotTimer -= dt;
+    if (entity.rapidShotTimer <= 0) {
+      fireProjectile(entity, targetX, targetY, entity.color, 5, owner, 950, 0, 'blade');
+      entity.rapidShotsLeft--;
+      entity.rapidShotTimer = 0.05;
+    }
+  }
+}
+
 function update(dt) {
   if (gameState !== 'playing') return;
 
@@ -997,33 +2153,28 @@ function update(dt) {
     statusTimer -= dt;
     if (statusTimer <= 0) document.getElementById('status').classList.remove('show');
   }
+  if (roundEnding) return;
 
-  // 어쌔신 칼날 연무 (발당 대미지 3.5)
-  if (player.alive && player.rapidShotsLeft > 0) {
-    player.rapidShotTimer -= dt;
-    if (player.rapidShotTimer <= 0) {
-      fireProjectile(player, mouse.x, mouse.y, '#f59e0b', 3.5, 'player', 950, 0, 'blade');
-      player.rapidShotsLeft--;
-      player.rapidShotTimer = 0.05;
-    }
-  }
+  updateEntityRapidShots(player, mouse.x, mouse.y, 'player', dt);
+  updateEntityRapidShots(bot, player.x, player.y, 'bot', dt);
+  if (startLabelTimer > 0) startLabelTimer = Math.max(0, startLabelTimer - dt);
 
-  // 지연 메테오 타이머 업데이트
   for (let i = delayedMeteors.length - 1; i >= 0; i--) {
     const dm = delayedMeteors[i];
     dm.delay -= dt;
     if (dm.delay <= 0) {
-      // 메테오 타격 오라 생성
       auras.push({ x: dm.x, y: dm.y, r: 0, maxR: dm.radius, dmg: dm.dmg, life: 0.35, dealt: false, owner: dm.owner });
       delayedMeteors.splice(i, 1);
     }
   }
 
-  // 플레이어 이동 및 제어
+  // 플레이어 업데이트
   if (player.alive) {
     const cls = CLASSES[selectedClassKey];
+    player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+
     const isDashing = now_ms() < player.dashUntil;
-    const speed = currentMoveSpeed(player, cls.moveSpeed);
+    const speed = currentMoveSpeed(player);
     
     if (isDashing) {
       player.x += player.dashVx * dt;
@@ -1042,39 +2193,79 @@ function update(dt) {
     player.x = Math.max(20, Math.min(canvas.width - 20, player.x));
     player.y = Math.max(20, Math.min(canvas.height - 20, player.y));
 
-    // 기본 공격
     if (mouse.down && cooldowns.basic.cur <= 0) {
       fireProjectile(player, mouse.x, mouse.y, cls.color, cls.basicDmg, 'player', cls.basicSpeed, cls.basicHoming);
       cooldowns.basic.cur = cooldowns.basic.max;
     }
-    // Q 스킬
     if (keys['q'] && cooldowns.q.cur <= 0 && !isDashing) {
-      useQSkill();
+      useQSkill(player, mouse.x, mouse.y, 'player');
     }
     if (player.hitFlash > 0) player.hitFlash -= dt;
   }
 
-  // BOT AI
+  // 상대방 Bot AI 업데이트
   if (bot.alive && player.alive) {
+    const botCls = CLASSES[bot.classKey];
+    bot.angle = Math.atan2(player.y - bot.y, player.x - bot.x);
+
     const d = dist(bot.x, bot.y, player.x, player.y);
     const dx = bot.x - player.x, dy = bot.y - player.y;
     const len = Math.hypot(dx, dy) || 1;
     const isDashing = now_ms() < bot.dashUntil;
-    const botSpeedMult = currentDifficulty.speedMult * (currentMoveSpeed(bot, 1));
+    const botSpeedMult = currentDifficulty.speedMult * (currentMoveSpeed(bot) / 250);
+
+    // 오프닝 대시 사용 금지 타이머 차감
+    if (bot.openingDashLockTimer > 0) {
+      bot.openingDashLockTimer -= dt;
+    }
 
     if (isDashing) {
       bot.x += bot.dashVx * dt;
       bot.y += bot.dashVy * dt;
     } else {
-      if (d < 260) {
-        bot.x += (dx / len) * 190 * botSpeedMult * dt;
-        bot.y += (dy / len) * 190 * botSpeedMult * dt;
-      } else if (d > 420) {
-        bot.x -= (dx / len) * 170 * botSpeedMult * dt;
-        bot.y -= (dy / len) * 170 * botSpeedMult * dt;
+      const margin = 35;
+      let wallVx = 0, wallVy = 0;
+      if (bot.x < margin) wallVx = 1;
+      else if (bot.x > canvas.width - margin) wallVx = -1;
+      if (bot.y < margin) wallVy = 1;
+      else if (bot.y > canvas.height - margin) wallVy = -1;
+
+      if (wallVx !== 0 || wallVy !== 0) {
+        const wallLen = Math.hypot(wallVx, wallVy) || 1;
+        bot.x += (wallVx / wallLen) * 220 * botSpeedMult * dt;
+        bot.y += (wallVy / wallLen) * 220 * botSpeedMult * dt;
+      } else if (bot.openingTimer > 0) {
+        bot.openingTimer -= dt;
+        const flankVx = -(dx / len) * 0.5;
+        const flankVy = bot.openingDirY * 0.866;
+        const flankLen = Math.hypot(flankVx, flankVy) || 1;
+        bot.x += (flankVx / flankLen) * 200 * botSpeedMult * dt;
+        bot.y += (flankVy / flankLen) * 200 * botSpeedMult * dt;
       } else {
-        bot.x += (-dy / len) * 110 * botSpeedMult * dt;
-        bot.y += (dx / len) * 110 * botSpeedMult * dt;
+        bot.moveDirTimer -= dt;
+        if (bot.moveDirTimer <= 0) {
+          bot.moveDirTimer = 0.4 + Math.random() * 0.7;
+          bot.moveDirAngle = (Math.random() - 0.5) * (Math.PI * 0.8);
+        }
+
+        let moveX = 0, moveY = 0;
+        if (d < 220) {
+          moveX = (dx / len);
+          moveY = (dy / len);
+        } else if (d > 450) {
+          moveX = -(dx / len);
+          moveY = -(dy / len);
+        } else {
+          const perpX = -dy / len;
+          const perpY = dx / len;
+          const cos = Math.cos(bot.moveDirAngle);
+          const sin = Math.sin(bot.moveDirAngle);
+          moveX = perpX * cos - perpY * sin;
+          moveY = perpX * sin + perpY * cos;
+        }
+
+        bot.x += moveX * 180 * botSpeedMult * dt;
+        bot.y += moveY * 180 * botSpeedMult * dt;
       }
     }
     applyKnockback(bot, dt);
@@ -1084,31 +2275,27 @@ function update(dt) {
     bot.qCd = Math.max(0, bot.qCd - dt);
     bot.eCd = Math.max(0, bot.eCd - dt);
 
-    if (!isDashing && bot.qCd <= 0) {
-      if (d < 140) {
-        bot.dashVx = (dx / len) * 1700; bot.dashVy = (dy / len) * 1700;
-        bot.dashUntil = now_ms() + 200;
-        bot.qCd = currentDifficulty.qCooldown;
-      } else if (d > 480) {
-        bot.dashVx = (-dx / len) * 1700; bot.dashVy = (-dy / len) * 1700;
-        bot.dashUntil = now_ms() + 200;
-        bot.qCd = currentDifficulty.qCooldown;
+    // 상대 시작 대시 방지 조건 (openingDashLockTimer <= 0)
+    if (!isDashing && bot.qCd <= 0 && bot.openingDashLockTimer <= 0) {
+      if (d < 140 || d > 480) {
+        useQSkill(bot, player.x, player.y, 'bot');
       }
     }
-    if (bot.eCd <= 0 && d < 210 * 0.85) {
-      castBurst(bot, 'bot');
-      bot.eCd = currentDifficulty.eCooldown;
+    const botEThreshold = bot.classKey === 'mage' ? 420 : 210 * 0.85;
+    if (bot.eCd <= 0 && d < botEThreshold) {
+      castBurst(bot, 'bot', player.x, player.y);
     }
 
     botShootTimer -= dt;
     if (botShootTimer <= 0) {
-      fireProjectile(bot, player.x, player.y, '#e0554f', 7 * currentDifficulty.dmgMult, 'bot', 480, currentDifficulty.homing);
+      const homingScale = 0.3 + currentDifficulty.homing * 0.4;
+      const botHoming = botCls.basicHoming + homingScale;
+      fireProjectile(bot, player.x, player.y, botCls.color, botCls.basicDmg * currentDifficulty.dmgMult, 'bot', botCls.basicSpeed, botHoming);
       botShootTimer = currentDifficulty.shootMin + Math.random() * (currentDifficulty.shootMax - currentDifficulty.shootMin);
     }
     if (bot.hitFlash > 0) bot.hitFlash -= dt;
   }
 
-  // 투사체 이동 및 판정
   for (let i = projectiles.length - 1; i >= 0; i--) {
     const p = projectiles[i];
     if (p.homing && player.alive) {
@@ -1137,7 +2324,6 @@ function update(dt) {
     }
   }
 
-  // 특수 오라
   for (let i = auras.length - 1; i >= 0; i--) {
     const a = auras[i];
     a.r += (a.maxR / 0.25) * dt;
@@ -1156,14 +2342,12 @@ function update(dt) {
     if (a.life <= 0) auras.splice(i, 1);
   }
 
-  // 데미지 플로팅 텍스트
   for (let i = floatingTexts.length - 1; i >= 0; i--) {
     const ft = floatingTexts[i];
     ft.y -= 35 * dt; ft.life -= dt;
     if (ft.life <= 0) floatingTexts.splice(i, 1);
   }
 
-  // 파티클
   for (let i = particles.length - 1; i >= 0; i--) {
     const pt = particles[i];
     pt.x += pt.vx * dt; pt.y += pt.vy * dt;
@@ -1171,17 +2355,19 @@ function update(dt) {
     if (pt.life <= 0) particles.splice(i, 1);
   }
 
-  // HUD 수치 갱신
   const pHpNorm = Math.max(0, player.hp / player.maxHp);
   const eHpNorm = Math.max(0, bot.hp / bot.maxHp);
   document.getElementById('playerHpFill').style.width = (pHpNorm * 100) + '%';
   document.getElementById('enemyHpFill').style.width = (eHpNorm * 100) + '%';
-  document.getElementById('playerHpText').textContent = `${Math.ceil(player.hp)} / ${player.maxHp}`;
-  document.getElementById('enemyHpText').textContent = `${Math.ceil(bot.hp)} / ${bot.maxHp}`;
+  document.getElementById('playerHpText').textContent = `${player.hp.toFixed(1)} / ${player.maxHp.toFixed(1)}`;
+  document.getElementById('enemyHpText').textContent = `${bot.hp.toFixed(1)} / ${bot.maxHp.toFixed(1)}`;
 
   document.getElementById('cdBasic').style.height = (cooldowns.basic.cur / cooldowns.basic.max * 100) + '%';
   document.getElementById('cdQ').style.height = (cooldowns.q.cur / cooldowns.q.max * 100) + '%';
   document.getElementById('cdE').style.height = (cooldowns.e.cur / cooldowns.e.max * 100) + '%';
+  document.getElementById('cdTextBasic').textContent = cooldowns.basic.cur > 0 ? `${cooldowns.basic.cur.toFixed(1)}s` : '';
+  document.getElementById('cdTextQ').textContent = cooldowns.q.cur > 0 ? `${cooldowns.q.cur.toFixed(1)}s` : '';
+  document.getElementById('cdTextE').textContent = cooldowns.e.cur > 0 ? `${cooldowns.e.cur.toFixed(1)}s` : '';
   document.getElementById('slotE').classList.toggle('charging', player.eCharging);
 
   let chips = '';
@@ -1201,7 +2387,7 @@ function update(dt) {
 
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (gameState === 'lobby') return;
+  if (gameState === 'lobby' && !previewMode) return;
 
   // 격자 배경
   ctx.strokeStyle = '#1c2530';
@@ -1214,120 +2400,143 @@ function render() {
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
   }
 
-  // 조준선
-  if (player.alive) {
-    ctx.strokeStyle = player.color + '50';
-    ctx.setLineDash([4, 6]);
-    ctx.beginPath();
-    ctx.moveTo(player.x, player.y);
-    ctx.lineTo(mouse.x, mouse.y);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-
-  // E 차징 범위 시각화
-  if (player.eCharging) {
-    const cls = CLASSES[selectedClassKey];
-    let rad = 210;
-    if (selectedClassKey === 'mage') rad = 180;
-    else if (selectedClassKey === 'assassin') rad = 120;
-    else if (selectedClassKey === 'paladin') rad = 110;
-
-    ctx.beginPath();
-    ctx.strokeStyle = cls.color;
-    ctx.lineWidth = 3;
-    ctx.setLineDash([6, 8]);
-    ctx.arc(player.x, player.y, rad, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.beginPath();
-    ctx.fillStyle = cls.glow;
-    ctx.arc(player.x, player.y, rad, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // 아케인 메이지: 마우스 지점 지연 메테오 가이드 오라 렌더링
-  for (const dm of delayedMeteors) {
-    const progress = 1 - (dm.delay / dm.maxDelay); // 0 ~ 1 과녁 채움
-    ctx.save();
-    // 바깥 경계선
-    ctx.beginPath();
-    ctx.strokeStyle = '#a970e8';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([6, 6]);
-    ctx.arc(dm.x, dm.y, dm.radius, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // 점차 차오르는 내부 원
-    ctx.beginPath();
-    ctx.fillStyle = 'rgba(169, 112, 232, 0.25)';
-    ctx.arc(dm.x, dm.y, dm.radius * progress, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 마법진 십자선
-    ctx.strokeStyle = 'rgba(169, 112, 232, 0.6)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(dm.x - 15, dm.y); ctx.lineTo(dm.x + 15, dm.y);
-    ctx.moveTo(dm.x, dm.y - 15); ctx.lineTo(dm.x, dm.y + 15);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  // 특수 폭발 오라
-  for (const a of auras) {
-    ctx.strokeStyle = a.owner === 'player' ? CLASSES[selectedClassKey].color : '#e0554f';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-
-  // 투사체 그리기
-  for (const p of projectiles) {
-    ctx.save();
-    if (p.type === 'blade') {
-      const angle = Math.atan2(p.vy, p.vx);
-      ctx.translate(p.x, p.y);
-      ctx.rotate(angle);
-      ctx.fillStyle = p.color;
-      ctx.shadowColor = p.color;
-      ctx.shadowBlur = 12;
+  if (!previewMode) {
+    // 조준선
+    if (player.alive) {
+      ctx.strokeStyle = player.color + '50';
+      ctx.setLineDash([4, 6]);
       ctx.beginPath();
-      ctx.moveTo(12, 0);
-      ctx.lineTo(-6, -3);
-      ctx.lineTo(-2, 0);
-      ctx.lineTo(-6, 3);
-      ctx.closePath();
-      ctx.fill();
-    } else {
-      ctx.beginPath();
-      ctx.fillStyle = p.color;
-      ctx.shadowColor = p.color;
-      ctx.shadowBlur = 10;
-      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.moveTo(player.x, player.y);
+      ctx.lineTo(mouse.x, mouse.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
     }
-    ctx.restore();
+
+    // E 차징 시 범위 시각화
+    if (player.eCharging) {
+      const cls = CLASSES[selectedClassKey];
+      let rad = 210;
+      let centerX = player.x;
+      let centerY = player.y;
+      let showChargeCircle = true;
+
+      if (selectedClassKey === 'mage') {
+        rad = 120;
+        centerX = mouse.x;
+        centerY = mouse.y;
+      } else if (selectedClassKey === 'paladin') {
+        rad = 110;
+      } else if (selectedClassKey === 'assassin') {
+        showChargeCircle = false;
+      }
+
+      if (showChargeCircle) {
+        ctx.beginPath();
+        ctx.strokeStyle = cls.color;
+        ctx.lineWidth = 3;
+        ctx.setLineDash([6, 8]);
+        ctx.arc(centerX, centerY, rad, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.fillStyle = cls.glow;
+        ctx.arc(centerX, centerY, rad, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // 마법사 메테오 가이드 오라
+    for (const dm of delayedMeteors) {
+      const progress = 1 - (dm.delay / dm.maxDelay);
+      ctx.save();
+      ctx.beginPath();
+      const meteorColor = dm.owner === 'bot' ? 'rgba(255, 110, 110, 0.9)' : '#a970e8';
+      ctx.strokeStyle = meteorColor;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 6]);
+      ctx.arc(dm.x, dm.y, dm.radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.beginPath();
+      ctx.fillStyle = dm.owner === 'bot' ? 'rgba(255, 110, 110, 0.2)' : 'rgba(169, 112, 232, 0.25)';
+      ctx.arc(dm.x, dm.y, dm.radius * progress, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = dm.owner === 'bot' ? 'rgba(255, 150, 150, 0.85)' : 'rgba(169, 112, 232, 0.6)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(dm.x - 15, dm.y); ctx.lineTo(dm.x + 15, dm.y);
+      ctx.moveTo(dm.x, dm.y - 15); ctx.lineTo(dm.x, dm.y + 15);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 특수 폭발 오라
+    for (const a of auras) {
+      const color = a.owner === 'player' ? CLASSES[selectedClassKey].color : CLASSES[bot.classKey].color;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    for (const p of projectiles) {
+      ctx.save();
+      if (p.type === 'blade') {
+        const angle = Math.atan2(p.vy, p.vx);
+        ctx.translate(p.x, p.y);
+        ctx.rotate(angle);
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.moveTo(12, 0);
+        ctx.lineTo(-6, -3);
+        ctx.lineTo(-2, 0);
+        ctx.lineTo(-6, 3);
+        ctx.closePath();
+        ctx.fill();
+        if (p.owner === 'bot') {
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = '#ff6b6b';
+          ctx.stroke();
+        }
+      } else {
+        ctx.beginPath();
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 10;
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+        if (p.owner === 'bot') {
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = '#ff6b6b';
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+
+    drawEntity(player);
+    drawEntity(bot);
+
+    if (startLabelTimer > 0) {
+      const alpha = Math.max(0, startLabelTimer / 2);
+      ctx.save();
+      ctx.font = '700 20px Orbitron, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+      ctx.shadowColor = `rgba(0,0,0,${alpha})`;
+      ctx.shadowBlur = 10;
+      ctx.fillText(startLabelText, player.x, player.y - player.radius - 12);
+      ctx.restore();
+    }
   }
 
-  // 사망 파티클
-  for (const pt of particles) {
-    const alpha = Math.max(0, pt.life / pt.maxLife);
-    ctx.beginPath();
-    ctx.fillStyle = pt.color;
-    ctx.globalAlpha = alpha;
-    ctx.shadowColor = pt.color;
-    ctx.shadowBlur = 12;
-    ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.globalAlpha = 1.0;
-  }
-
-  drawEntity(player);
-  drawEntity(bot);
+  if (previewMode) return;
 
   // 데미지 텍스트
   ctx.textAlign = 'center';
@@ -1344,21 +2553,23 @@ function render() {
   }
 }
 
+// 클래스별 디테일 외형 렌더링
 function drawEntity(e) {
   if (!e.alive) return;
 
-  // 팔라딘 완벽 무효 보호막 오라 이펙트 및 스택 숫자 표기
+  ctx.save();
+  ctx.translate(e.x, e.y);
+
   if (e.shieldStacks > 0) {
     ctx.beginPath();
     ctx.strokeStyle = '#38bdf8';
     ctx.lineWidth = 3;
     ctx.shadowColor = '#38bdf8';
     ctx.shadowBlur = 14;
-    ctx.arc(e.x, e.y, e.radius + 8, 0, Math.PI * 2);
+    ctx.arc(0, 0, e.radius + 8, 0, Math.PI * 2);
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    // 보호막 상단/중앙에 방어막 카운트(스택 숫자) 표시
     ctx.save();
     ctx.fillStyle = '#38bdf8';
     ctx.font = '700 14px Orbitron, sans-serif';
@@ -1366,20 +2577,90 @@ function drawEntity(e) {
     ctx.textBaseline = 'middle';
     ctx.shadowColor = '#000000';
     ctx.shadowBlur = 4;
-    ctx.fillText(e.shieldStacks, e.x, e.y);
+    ctx.fillText(e.shieldStacks, 0, 0);
     ctx.restore();
   }
 
+  const mainColor = e.hitFlash > 0 ? '#ffffff' : e.color;
+
+  // 본체 원
   ctx.beginPath();
-  ctx.fillStyle = e.hitFlash > 0 ? '#ffffff' : e.color;
+  ctx.fillStyle = mainColor;
   ctx.shadowColor = e.glow;
   ctx.shadowBlur = 18;
-  ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+  ctx.arc(0, 0, e.radius, 0, Math.PI * 2);
   ctx.fill();
   ctx.shadowBlur = 0;
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = '#0a0e14';
+  if (e === bot) {
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#ff6b6b';
+  } else {
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#0a0e14';
+  }
   ctx.stroke();
+
+  // 클래스별 독특한 심볼 외형 렌더링
+  ctx.rotate(e.angle);
+  ctx.strokeStyle = mainColor;
+  ctx.fillStyle = mainColor;
+
+  if (e.classKey === 'striker') {
+    // 테두리 링 + 정면 방향 화살표
+    ctx.beginPath();
+    ctx.lineWidth = 2;
+    ctx.arc(0, 0, e.radius + 4, -Math.PI / 3, Math.PI / 3);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(e.radius + 6, 0);
+    ctx.lineTo(e.radius - 2, -5);
+    ctx.lineTo(e.radius - 2, 5);
+    ctx.closePath();
+    ctx.fill();
+  } else if (e.classKey === 'mage') {
+    // 회전 마법 룬 외곽
+    ctx.save();
+    ctx.rotate(now_ms() * 0.002);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i < 3; i++) {
+      const a = (i * Math.PI * 2) / 3;
+      const rx = Math.cos(a) * (e.radius + 5);
+      const ry = Math.sin(a) * (e.radius + 5);
+      ctx.moveTo(rx, ry);
+      ctx.arc(rx, ry, 2, 0, Math.PI * 2);
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.beginPath();
+    ctx.arc(0, 0, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+  } else if (e.classKey === 'assassin') {
+    // 암살자 십자 날카로운 마크
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-e.radius - 2, 0); ctx.lineTo(e.radius + 2, 0);
+    ctx.moveTo(0, -e.radius - 2); ctx.lineTo(0, e.radius + 2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(e.radius + 5, 0);
+    ctx.lineTo(e.radius, -3);
+    ctx.lineTo(e.radius, 3);
+    ctx.closePath();
+    ctx.fill();
+  } else if (e.classKey === 'paladin') {
+    // 팔라딘 전방 성스러운 방패 오라
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(0, 0, e.radius + 5, -Math.PI / 2.5, Math.PI / 2.5);
+    ctx.stroke();
+  }
+
+  ctx.restore();
 }
 
 applyLanguage(currentLang);
