@@ -35,8 +35,20 @@
     overflow: hidden;
     font-family: 'Rajdhani', sans-serif;
     color: var(--text-primary);
+    touch-action: manipulation;
   }
   
+  button,
+  .action-btn,
+  .lang-btn,
+  .diff-btn,
+  .skill-detail-btn {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
   #arena {
     position: fixed;
     inset: 0;
@@ -52,6 +64,14 @@
     pointer-events: none;
     user-select: none;
     z-index: 10;
+  }
+  body.mobile-ui .hud {
+    pointer-events: none;
+  }
+  body.mobile-ui #pauseHint,
+  body.mobile-ui .mobile-controls,
+  body.mobile-ui .mobile-controls * {
+    pointer-events: auto;
   }
 
   /* Topbar */
@@ -222,6 +242,10 @@
     justify-content: center;
     pointer-events: auto;
     touch-action: none;
+  }
+  .skill-buttons,
+  .skill-stick {
+    touch-action: manipulation;
   }
   .stick-base {
     position: absolute;
@@ -441,6 +465,7 @@
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
     z-index: 100;
+    touch-action: manipulation;
   }
   #topbar {
     transform: scale(var(--ui-scale));
@@ -533,6 +558,9 @@
     font-size: 11px; font-weight: 700;
     padding: 6px 10px; cursor: pointer;
     transition: all 0.15s; border-radius: 2px;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
   }
   .skill-detail-btn:hover {
     background: var(--accent-player);
@@ -684,6 +712,9 @@
     width: 110px; padding: 12px 0; text-align: center;
     font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 16px;
     letter-spacing: 2px; cursor: pointer; transition: all 0.15s;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
   }
   .diff-btn:hover { border-color: var(--text-primary); color: var(--text-primary); }
   .diff-btn.easy.active { border-color: var(--diff-easy); color: var(--diff-easy); box-shadow: 0 0 14px #4ade8040; }
@@ -700,6 +731,10 @@
     justify-content: center;
     text-align: center;
     cursor: pointer; transition: all 0.15s;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
   }
   .action-btn.primary { border: 2px solid var(--accent-player); color: var(--accent-player); }
   .action-btn.primary:hover { background: var(--accent-player); color: #0a0e14; box-shadow: 0 0 24px var(--accent-player-glow); }
@@ -867,6 +902,10 @@
     pointer-events: all; background: transparent; border: 2px solid var(--panel-border);
     color: var(--text-dim); padding: 6px 14px; font-family: 'Orbitron', sans-serif;
     font-weight: 700; font-size: 12px; letter-spacing: 1px; cursor: pointer; transition: all 0.15s;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
   }
   .lang-btn:hover { border-color: var(--text-primary); color: var(--text-primary); }
   .lang-btn.active { border-color: var(--accent-player); color: var(--accent-player); box-shadow: 0 0 10px var(--accent-player-glow); }
@@ -1188,33 +1227,49 @@ moveStick.addEventListener('pointerdown', e => handleStickDown(e, 'move'));
 moveStick.addEventListener('pointermove', e => handleStickMove(e, 'move'));
 moveStick.addEventListener('pointerup', e => handleStickUp(e, 'move'));
 moveStick.addEventListener('pointercancel', e => handleStickUp(e, 'move'));
-moveStick.addEventListener('touchstart', e => { e.preventDefault(); handleStickDown(e.changedTouches[0], 'move'); });
-moveStick.addEventListener('touchmove', e => { e.preventDefault(); handleStickMove(e.changedTouches[0], 'move'); });
-moveStick.addEventListener('touchend', e => { e.preventDefault(); handleStickUp(e.changedTouches[0], 'move'); });
+moveStick.addEventListener('touchstart', e => { e.preventDefault(); handleStickDown(e.changedTouches[0], 'move'); }, { passive: false });
+moveStick.addEventListener('touchmove', e => { e.preventDefault(); handleStickMove(e.changedTouches[0], 'move'); }, { passive: false });
+moveStick.addEventListener('touchend', e => { e.preventDefault(); handleStickUp(e.changedTouches[0], 'move'); }, { passive: false });
 
 attackStick.addEventListener('pointerdown', e => handleStickDown(e, 'attack'));
 attackStick.addEventListener('pointermove', e => handleStickMove(e, 'attack'));
 attackStick.addEventListener('pointerup', e => handleStickUp(e, 'attack'));
 attackStick.addEventListener('pointercancel', e => handleStickUp(e, 'attack'));
-attackStick.addEventListener('touchstart', e => { e.preventDefault(); handleStickDown(e.changedTouches[0], 'attack'); });
-attackStick.addEventListener('touchmove', e => { e.preventDefault(); handleStickMove(e.changedTouches[0], 'attack'); });
-attackStick.addEventListener('touchend', e => { e.preventDefault(); handleStickUp(e.changedTouches[0], 'attack'); });
+attackStick.addEventListener('touchstart', e => { e.preventDefault(); handleStickDown(e.changedTouches[0], 'attack'); }, { passive: false });
+attackStick.addEventListener('touchmove', e => { e.preventDefault(); handleStickMove(e.changedTouches[0], 'attack'); }, { passive: false });
+attackStick.addEventListener('touchend', e => { e.preventDefault(); handleStickUp(e.changedTouches[0], 'attack'); }, { passive: false });
 
 pauseHint.addEventListener('pointerdown', () => {
   if (gameState === 'playing') pauseGame();
 });
 pauseHint.addEventListener('touchstart', e => {
   e.preventDefault(); if (gameState === 'playing') pauseGame();
-});
+}, { passive: false });
 
-document.querySelector('.skill-stick.q').addEventListener('pointerdown', () => {
+const skillQButton = document.querySelector('.skill-stick.q');
+const skillEButton = document.querySelector('.skill-stick.e');
+skillQButton.addEventListener('pointerdown', (e) => {
+  if (e.pointerType !== 'mouse') e.preventDefault();
   if (gameState === 'playing' && cooldowns.q.cur <= 0) {
     useQSkill(player, mouse.x, mouse.y, 'player');
     cooldowns.q.cur = cooldowns.q.max;
   }
 });
-
-document.querySelector('.skill-stick.e').addEventListener('pointerdown', () => {
+skillEButton.addEventListener('pointerdown', (e) => {
+  if (e.pointerType !== 'mouse') e.preventDefault();
+  if (gameState === 'playing' && cooldowns.e.cur <= 0 && !player.eCharging) {
+    startCharging();
+  }
+});
+skillQButton.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  if (gameState === 'playing' && cooldowns.q.cur <= 0) {
+    useQSkill(player, mouse.x, mouse.y, 'player');
+    cooldowns.q.cur = cooldowns.q.max;
+  }
+});
+skillEButton.addEventListener('touchstart', (e) => {
+  e.preventDefault();
   if (gameState === 'playing' && cooldowns.e.cur <= 0 && !player.eCharging) {
     startCharging();
   }
@@ -1573,6 +1628,7 @@ const I18N = {
     damageTextLabel: 'Damage Numbers', toggleOn: 'ON', toggleOff: 'OFF', closeBtn: 'Close',
     soundVolumeLabel: 'Sound Volume', sliderTitle: 'VOLUME', uiScaleLabel: 'UI SIZE', uiScaleTitle: 'SIZE',
     uiPreviewBtn: 'UI PREVIEW', leavePreviewBtn: 'EXIT PREVIEW',
+    pauseHintText: 'Press ESC to pause', pauseBtnText: 'PAUSE',
     skillDetailBtn: 'SKILL INFO',
     diffTitle: 'SELECT DIFFICULTY', diffSub: "Determines opponent's speed, attack frequency, and skill behavior",
     diffEasy: 'EASY', diffNormal: 'NORMAL', diffHard: 'HARD', diffNightmare: 'NIGHTMARE', backBtn: 'Back',
@@ -1673,6 +1729,20 @@ function applyLanguage(lang) {
 
 document.getElementById('langKoBtn').addEventListener('click', () => applyLanguage('ko'));
 document.getElementById('langEnBtn').addEventListener('click', () => applyLanguage('en'));
+document.getElementById('langKoBtn').addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') { e.preventDefault(); applyLanguage('ko'); } });
+document.getElementById('langEnBtn').addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') { e.preventDefault(); applyLanguage('en'); } });
+
+document.querySelector('.skill-stick.q').addEventListener('touchstart', (e) => {
+  e.preventDefault(); if (gameState === 'playing' && cooldowns.q.cur <= 0) {
+    useQSkill(player, mouse.x, mouse.y, 'player');
+    cooldowns.q.cur = cooldowns.q.max;
+  }
+}, { passive: false });
+document.querySelector('.skill-stick.e').addEventListener('touchstart', (e) => {
+  e.preventDefault(); if (gameState === 'playing' && cooldowns.e.cur <= 0 && !player.eCharging) {
+    startCharging();
+  }
+}, { passive: false });
 
 function applyClassAccent() {
   document.documentElement.style.setProperty('--class-accent', CLASSES[selectedClassKey].color);
@@ -1947,6 +2017,10 @@ document.querySelectorAll('button').forEach(element => {
       playSfx('buttonClick');
     });
   }
+  element.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (!element.disabled) element.click();
+  }, { passive: false });
 });
 
 document.querySelectorAll('.class-card').forEach(card => {
