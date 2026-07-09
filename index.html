@@ -298,17 +298,17 @@
     <div class="class-card" data-class="mage">
       <div class="class-icon">🔮</div>
       <div class="class-name" id="cNameMage">ARCANE MAGE</div>
-      <div class="class-desc" id="cDescMage">약한 유도 탄환과 조준 점멸, 범위를 일부 축소한 메테오를 사용합니다.</div>
+      <div class="class-desc" id="cDescMage">유도 탄환과 점멸, 마우스 위치에 1초 뒤 낙하하는 메테오를 사용합니다.</div>
     </div>
     <div class="class-card" data-class="assassin">
       <div class="class-icon">🗡️</div>
       <div class="class-name" id="cNameAssassin">ASSASSIN</div>
-      <div class="class-desc" id="cDescAssassin">그림자 도약 후, 마우스 방향으로 빠른 암살용 탄환들을 난사합니다.</div>
+      <div class="class-desc" id="cDescAssassin">그림자 도약 후, 마우스 방향으로 빠른 암살용 칼날 탄환들을 난사합니다.</div>
     </div>
     <div class="class-card" data-class="paladin">
       <div class="class-icon">🛡️</div>
       <div class="class-name" id="cNamePaladin">PALADIN</div>
-      <div class="class-desc" id="cDescPaladin">근접 충격파 발사 후 다음 받는 1회 피해를 무효화하는 보호막을 획득합니다.</div>
+      <div class="class-desc" id="cDescPaladin">근접 충격파 발사 후 대미지를 2회 막아주는 성스러운 보호막을 획득합니다.</div>
     </div>
   </div>
 
@@ -446,14 +446,14 @@ const CLASSES = {
   mage: {
     color: '#a970e8', glow: '#a970e880',
     maxHp: 85, moveSpeed: 240,
-    basicDmg: 13, basicSpeed: 450, basicCd: 0.45, basicHoming: 0.6, // 메테오 유도량 너프 (2.2 -> 0.6)
+    basicDmg: 10, basicSpeed: 450, basicCd: 0.45, basicHoming: 0.6, // 평타 대미지 너프 (13 -> 10)
     qCd: 5.0, eCd: 8.0,
     skills: { ko: { basic: '유도 마탄', q: '점멸', e: '메테오' }, en: { basic: 'Arcane Bolt', q: 'Blink', e: 'Meteor' } }
   },
   assassin: {
     color: '#f2c744', glow: '#f2c74480',
     maxHp: 80, moveSpeed: 310,
-    basicDmg: 15, basicSpeed: 820, basicCd: 0.25, basicHoming: 0,
+    basicDmg: 11, basicSpeed: 820, basicCd: 0.25, basicHoming: 0, // 평타 대미지 너프 (15 -> 11)
     qCd: 2.8, eCd: 5.5,
     skills: { ko: { basic: '암습', q: '그림자 도약', e: '칼날 연무' }, en: { basic: 'Shadow Strike', q: 'Shadow Leap', e: 'Blade Volley' } }
   },
@@ -474,10 +474,9 @@ function makeEntity(x, y, color, glow, radius) {
     dashUntil: 0, dashVx: 0, dashVy: 0, hitFlash: 0,
     slowUntil: 0, slowFactor: 1,
     knockbackVx: 0, knockbackVy: 0, knockbackDisplayUntil: 0,
-    hasShield: false, // 팔라딘 1회성 완벽 방어막
+    shieldStacks: 0, // 팔라딘 2회 방어막 스택
     eCharging: false, eChargeStart: 0,
     qCd: 0, eCd: 0,
-    // 어쌔신 연사용
     rapidShotsLeft: 0, rapidShotTimer: 0
   };
 }
@@ -487,6 +486,7 @@ const bot = makeEntity(900, 400, '#e0554f', '#e0554f80', 16);
 
 const projectiles = [];
 const auras = [];
+const delayedMeteors = []; // 지연 발생 메테오
 const floatingTexts = [];
 const particles = [];
 
@@ -501,9 +501,9 @@ const I18N = {
     startBtn: '전투 시작', selectClassBtn: '클래스 선택', settingsBtn: '설정',
     classTitle: 'CLASS SELECT', classSub: '전투에 사용할 클래스를 선택하세요', confirmBtn: '확인',
     cNameStriker: 'STRIKER', cDescStriker: '균형 잡힌 원거리 투사체 공격과 대시, 파열구 범위 기술을 사용합니다.',
-    cNameMage: 'ARCANE MAGE', cDescMage: '약한 유도 탄환과 조준 점멸, 범위를 일부 축소한 메테오를 사용합니다.',
-    cNameAssassin: 'ASSASSIN', cDescAssassin: '그림자 도약 후, 마우스 방향으로 빠른 암살용 탄환들을 난사합니다.',
-    cNamePaladin: 'PALADIN', cDescPaladin: '근접 충격파 발사 후 다음 받는 1회 피해를 무효화하는 보호막을 획득합니다.',
+    cNameMage: 'ARCANE MAGE', cDescMage: '유도 탄환과 점멸, 마우스 위치에 1초 뒤 낙하하는 메테오를 사용합니다.',
+    cNameAssassin: 'ASSASSIN', cDescAssassin: '그림자 도약 후, 마우스 방향으로 빠른 암살용 칼날 탄환들을 난사합니다.',
+    cNamePaladin: 'PALADIN', cDescPaladin: '근접 충격파 발사 후 대미지를 2회 막아주는 성스러운 보호막을 획득합니다.',
     settingsTitle: 'SETTINGS', settingsSub: '게임 설정을 변경할 수 있습니다',
     damageTextLabel: '대미지 표시', toggleOn: 'ON', toggleOff: 'OFF', closeBtn: '닫기',
     diffTitle: '난이도 선택', diffSub: '상대의 속도 · 공격 빈도 · 스킬 사용을 결정해요',
@@ -520,9 +520,9 @@ const I18N = {
     startBtn: 'START BATTLE', selectClassBtn: 'SELECT CLASS', settingsBtn: 'SETTINGS',
     classTitle: 'CLASS SELECT', classSub: 'Select your class before battle', confirmBtn: 'CONFIRM',
     cNameStriker: 'STRIKER', cDescStriker: 'Balanced ranged pulse shots, directional dash, and radial burst explosion.',
-    cNameMage: 'ARCANE MAGE', cDescMage: 'Light homing bolts, instantaneous blink, and nerfed meteor strike.',
+    cNameMage: 'ARCANE MAGE', cDescMage: 'Light homing bolts, instantaneous blink, and delayed targeted meteor strike.',
     cNameAssassin: 'ASSASSIN', cDescAssassin: 'High mobility shadow leap and rapid directional blade projectile barrage.',
-    cNamePaladin: 'PALADIN', cDescPaladin: 'Close-range holy burst with a 1-hit invincibility shield after cast.',
+    cNamePaladin: 'PALADIN', cDescPaladin: 'Close-range holy burst with a 2-stack invincibility shield after cast.',
     settingsTitle: 'SETTINGS', settingsSub: 'Change your game settings',
     damageTextLabel: 'Damage Numbers', toggleOn: 'ON', toggleOff: 'OFF', closeBtn: 'Close',
     diffTitle: 'SELECT DIFFICULTY', diffSub: "Determines opponent's speed, attack frequency, and skill behavior",
@@ -772,7 +772,7 @@ function resetEntityState(e, x, y, isPlayer) {
   e.dashUntil = 0; e.dashVx = 0; e.dashVy = 0; e.hitFlash = 0;
   e.slowUntil = 0; e.slowFactor = 1;
   e.knockbackVx = 0; e.knockbackVy = 0; e.knockbackDisplayUntil = 0;
-  e.hasShield = false;
+  e.shieldStacks = 0;
   e.eCharging = false; e.eChargeStart = 0;
   e.qCd = 0; e.eCd = 0;
   e.rapidShotsLeft = 0; e.rapidShotTimer = 0;
@@ -783,6 +783,7 @@ function resetRound() {
   resetEntityState(bot, canvas.width * 0.88, canvas.height * 0.5, false);
   projectiles.length = 0;
   auras.length = 0;
+  delayedMeteors.length = 0;
   floatingTexts.length = 0;
   particles.length = 0;
   botShootTimer = 0.8;
@@ -793,7 +794,6 @@ function fireProjectile(from, tx, ty, color, dmg, owner, speed, homing, type = '
   const dx = tx - from.x, dy = ty - from.y;
   const len = Math.hypot(dx, dy) || 1;
   
-  // 칼날연무 전용 탄환 타입 분기
   const radius = type === 'blade' ? 4 : 6;
   const life = type === 'blade' ? 1.2 : 1.8;
 
@@ -840,26 +840,34 @@ function useQSkill() {
 
 // 특수스킬 (E)
 function castBurst(caster, owner) {
-  let radius = 210;
-  let dmg = 24;
-
   if (owner === 'player') {
     if (selectedClassKey === 'mage') {
-      // 메테오 너프: 범위를 기존 320 -> 180으로 대폭 축소
-      radius = 180; dmg = 38; 
+      // 메테오: 마우스 위치에 1초(1.0s) 지연 폭발 오라 등록
+      delayedMeteors.push({
+        x: mouse.x,
+        y: mouse.y,
+        delay: 1.0,
+        maxDelay: 1.0,
+        radius: 180,
+        dmg: 38,
+        owner: 'player'
+      });
+      return;
     } else if (selectedClassKey === 'assassin') {
-      // 어쌔신: 조준 방향으로 일정시간 동안 여러개의 칼날 탄환 난사 시작
-      caster.rapidShotsLeft = 12; // 12발 발사
+      // 어쌔신: 칼날 연무 (발당 대미지 3.5 너프)
+      caster.rapidShotsLeft = 12;
       caster.rapidShotTimer = 0;
       return; 
     } else if (selectedClassKey === 'paladin') {
-      // 팔라딘: 스킬 범위를 대폭 축소 (250 -> 110), 대신 사용 직후 1회용 모든 대미지 무효 보호막 획득
-      radius = 110; dmg = 26;
-      caster.hasShield = true;
+      // 팔라딘: 근접 충격파 + 보호막 2회 무효화 부여
+      auras.push({ x: caster.x, y: caster.y, r: 0, maxR: 110, dmg: 26, life: 0.35, dealt: false, owner });
+      caster.shieldStacks = 2;
+      return;
     }
   }
 
-  auras.push({ x: caster.x, y: caster.y, r: 0, maxR: radius, dmg: dmg, life: 0.35, dealt: false, owner });
+  // 기본 스트라이커 및 BOT 공통
+  auras.push({ x: caster.x, y: caster.y, r: 0, maxR: 210, dmg: 24, life: 0.35, dealt: false, owner });
 }
 
 function startCharging() {
@@ -923,9 +931,9 @@ function spawnDeathParticles(x, y, color) {
 function applyDamage(target, dmg, sourceOwner) {
   if (!target.alive) return;
 
-  // 팔라딘 1회성 피격 무효화 보호막 동작
-  if (target.hasShield) {
-    target.hasShield = false;
+  // 팔라딘 2회 방어막 판정
+  if (target.shieldStacks > 0) {
+    target.shieldStacks--;
     spawnDamageText(target.x, target.y - target.radius, 'BLOCKED!', '#38bdf8');
     spawnDeathParticles(target.x, target.y, '#38bdf8');
     return;
@@ -990,13 +998,24 @@ function update(dt) {
     if (statusTimer <= 0) document.getElementById('status').classList.remove('show');
   }
 
-  // 어쌔신 칼날 연무(탄환 난사) 발사 처리
+  // 어쌔신 칼날 연무 (발당 대미지 3.5)
   if (player.alive && player.rapidShotsLeft > 0) {
     player.rapidShotTimer -= dt;
     if (player.rapidShotTimer <= 0) {
-      fireProjectile(player, mouse.x, mouse.y, '#f59e0b', 6, 'player', 950, 0, 'blade');
+      fireProjectile(player, mouse.x, mouse.y, '#f59e0b', 3.5, 'player', 950, 0, 'blade');
       player.rapidShotsLeft--;
-      player.rapidShotTimer = 0.05; // 0.05초 간격 연속 연사
+      player.rapidShotTimer = 0.05;
+    }
+  }
+
+  // 지연 메테오 타이머 업데이트
+  for (let i = delayedMeteors.length - 1; i >= 0; i--) {
+    const dm = delayedMeteors[i];
+    dm.delay -= dt;
+    if (dm.delay <= 0) {
+      // 메테오 타격 오라 생성
+      auras.push({ x: dm.x, y: dm.y, r: 0, maxR: dm.radius, dmg: dm.dmg, life: 0.35, dealt: false, owner: dm.owner });
+      delayedMeteors.splice(i, 1);
     }
   }
 
@@ -1167,8 +1186,8 @@ function update(dt) {
 
   let chips = '';
   const nowT = now_ms();
-  if (player.hasShield) {
-    chips += `<span class="effect-chip shield">SHIELD (1 HIT)</span>`;
+  if (player.shieldStacks > 0) {
+    chips += `<span class="effect-chip shield">SHIELD (${player.shieldStacks})</span>`;
   }
   if (nowT < player.slowUntil) {
     const remain = ((player.slowUntil - nowT) / 1000).toFixed(1);
@@ -1227,7 +1246,36 @@ function render() {
     ctx.fill();
   }
 
-  // 특수 오라
+  // 아케인 메이지: 마우스 지점 지연 메테오 가이드 오라 렌더링
+  for (const dm of delayedMeteors) {
+    const progress = 1 - (dm.delay / dm.maxDelay); // 0 ~ 1 과녁 채움
+    ctx.save();
+    // 바깥 경계선
+    ctx.beginPath();
+    ctx.strokeStyle = '#a970e8';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 6]);
+    ctx.arc(dm.x, dm.y, dm.radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 점차 차오르는 내부 원
+    ctx.beginPath();
+    ctx.fillStyle = 'rgba(169, 112, 232, 0.25)';
+    ctx.arc(dm.x, dm.y, dm.radius * progress, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 마법진 십자선
+    ctx.strokeStyle = 'rgba(169, 112, 232, 0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(dm.x - 15, dm.y); ctx.lineTo(dm.x + 15, dm.y);
+    ctx.moveTo(dm.x, dm.y - 15); ctx.lineTo(dm.x, dm.y + 15);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // 특수 폭발 오라
   for (const a of auras) {
     ctx.strokeStyle = a.owner === 'player' ? CLASSES[selectedClassKey].color : '#e0554f';
     ctx.lineWidth = 4;
@@ -1236,11 +1284,10 @@ function render() {
     ctx.stroke();
   }
 
-  // 투사체 그리기 (일반 방울 vs 칼날 탄환)
+  // 투사체 그리기
   for (const p of projectiles) {
     ctx.save();
     if (p.type === 'blade') {
-      // 어쌔신의 얇은 칼날 형태 탄환
       const angle = Math.atan2(p.vy, p.vx);
       ctx.translate(p.x, p.y);
       ctx.rotate(angle);
@@ -1255,7 +1302,6 @@ function render() {
       ctx.closePath();
       ctx.fill();
     } else {
-      // 일반 구형 탄환
       ctx.beginPath();
       ctx.fillStyle = p.color;
       ctx.shadowColor = p.color;
@@ -1301,16 +1347,27 @@ function render() {
 function drawEntity(e) {
   if (!e.alive) return;
 
-  // 팔라딘 완벽 무효 보호막 오라 이펙트
-  if (e.hasShield) {
+  // 팔라딘 완벽 무효 보호막 오라 이펙트 및 스택 숫자 표기
+  if (e.shieldStacks > 0) {
     ctx.beginPath();
     ctx.strokeStyle = '#38bdf8';
     ctx.lineWidth = 3;
     ctx.shadowColor = '#38bdf8';
-    ctx.shadowBlur = 12;
-    ctx.arc(e.x, e.y, e.radius + 7, 0, Math.PI * 2);
+    ctx.shadowBlur = 14;
+    ctx.arc(e.x, e.y, e.radius + 8, 0, Math.PI * 2);
     ctx.stroke();
     ctx.shadowBlur = 0;
+
+    // 보호막 상단/중앙에 방어막 카운트(스택 숫자) 표시
+    ctx.save();
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = '700 14px Orbitron, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = '#000000';
+    ctx.shadowBlur = 4;
+    ctx.fillText(e.shieldStacks, e.x, e.y);
+    ctx.restore();
   }
 
   ctx.beginPath();
