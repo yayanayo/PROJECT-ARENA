@@ -1,12 +1,37 @@
 name: pages build and deployment
+
 on:
   push:
     branches: [ main ]
+
+# GitHub Pages 권한 설정
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 concurrency:
   group: pages-build-deployment
   cancel-in-progress: true
+
 jobs:
-  reset:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Resetting queue"
+      - name: Checkout
+        uses: actions/checkout@v4.2.2  # 최신 패치 버전 사용
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.' # 배포할 정적 파일 디렉토리 (필요에 따라 '.' 또는 'dist', 'build' 등으로 변경)
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
