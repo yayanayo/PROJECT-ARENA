@@ -118,6 +118,7 @@
   }
   .effect-chip.slow { border-color: var(--accent-slow); color: var(--accent-slow); }
   .effect-chip.knockback { border-color: var(--accent-skill-q); color: var(--accent-skill-q); }
+  .effect-chip.shield { border-color: #38bdf8; color: #38bdf8; text-shadow: 0 0 6px #38bdf8; }
 
   /* Skillbar */
   #skillbar {
@@ -236,6 +237,8 @@
   .action-btn.primary:hover { background: var(--accent-player); color: #0a0e14; box-shadow: 0 0 24px var(--accent-player-glow); }
   .action-btn.secondary { border: 2px solid var(--panel-border); color: var(--text-dim); padding: 16px 36px; font-size: 15px; }
   .action-btn.secondary:hover { border-color: var(--text-primary); color: var(--text-primary); }
+  .btn-column { display: flex; flex-direction: column; gap: 14px; width: 320px; align-items: stretch; }
+  .btn-column .action-btn { text-align: center; }
   .btn-row { display: flex; gap: 16px; }
 
   .setting-item {
@@ -269,10 +272,23 @@
   <button class="lang-btn" id="langEnBtn" data-lang="en">EN</button>
 </div>
 
+<!-- 메인 화면 -->
 <div class="overlay-screen" id="screenMain">
   <div class="lobby-title">PROJECT: ARENA</div>
-  <div class="lobby-sub" id="lobbySub">클래스를 선택하고 전장에 참여하세요</div>
+  <div class="lobby-sub" id="lobbySub">전장에 참여하여 승리하세요</div>
   
+  <div class="btn-column">
+    <button class="action-btn primary" id="mainStartBtn">전투 시작</button>
+    <button class="action-btn secondary" id="mainClassBtn">클래스 선택</button>
+    <button class="action-btn secondary" id="mainSettingsBtn">설정</button>
+  </div>
+</div>
+
+<!-- 클래스 선택 화면 -->
+<div class="overlay-screen hidden" id="screenClassSelect">
+  <div class="lobby-title" style="font-size:38px;" id="classTitle">CLASS SELECT</div>
+  <div class="lobby-sub" id="classSub">전투에 사용할 클래스를 선택하세요</div>
+
   <div class="class-select-grid" id="classSelectGrid">
     <div class="class-card active" data-class="striker">
       <div class="class-icon">⚡</div>
@@ -282,24 +298,21 @@
     <div class="class-card" data-class="mage">
       <div class="class-icon">🔮</div>
       <div class="class-name" id="cNameMage">ARCANE MAGE</div>
-      <div class="class-desc" id="cDescMage">유도 미사일과 조준 지점 순식간 점멸, 광역 메테오 마법을 다룹니다.</div>
+      <div class="class-desc" id="cDescMage">약한 유도 탄환과 조준 점멸, 범위를 일부 축소한 메테오를 사용합니다.</div>
     </div>
     <div class="class-card" data-class="assassin">
       <div class="class-icon">🗡️</div>
       <div class="class-name" id="cNameAssassin">ASSASSIN</div>
-      <div class="class-desc" id="cDescAssassin">빠른 기동성, 순식간의 그림자 도약과 광범위 칼날 연무 폭딜에 특화됩니다.</div>
+      <div class="class-desc" id="cDescAssassin">그림자 도약 후, 마우스 방향으로 빠른 암살용 탄환들을 난사합니다.</div>
     </div>
     <div class="class-card" data-class="paladin">
       <div class="class-icon">🛡️</div>
       <div class="class-name" id="cNamePaladin">PALADIN</div>
-      <div class="class-desc" id="cDescPaladin">높은 체력을 가지고 적을 강하게 밀쳐내는 방패 돌진과 충격파 파동을 방출합니다.</div>
+      <div class="class-desc" id="cDescPaladin">근접 충격파 발사 후 다음 받는 1회 피해를 무효화하는 보호막을 획득합니다.</div>
     </div>
   </div>
 
-  <div class="btn-row">
-    <button class="action-btn primary" id="mainStartBtn">난이도 선택</button>
-    <button class="action-btn secondary" id="mainSettingsBtn">설정</button>
-  </div>
+  <button class="action-btn secondary" id="closeClassBtn">확인</button>
 </div>
 
 <div class="overlay-screen hidden" id="screenSettings">
@@ -433,7 +446,7 @@ const CLASSES = {
   mage: {
     color: '#a970e8', glow: '#a970e880',
     maxHp: 85, moveSpeed: 240,
-    basicDmg: 13, basicSpeed: 450, basicCd: 0.45, basicHoming: 2.2, // 유도 미사일 강화
+    basicDmg: 13, basicSpeed: 450, basicCd: 0.45, basicHoming: 0.6, // 메테오 유도량 너프 (2.2 -> 0.6)
     qCd: 5.0, eCd: 8.0,
     skills: { ko: { basic: '유도 마탄', q: '점멸', e: '메테오' }, en: { basic: 'Arcane Bolt', q: 'Blink', e: 'Meteor' } }
   },
@@ -441,8 +454,8 @@ const CLASSES = {
     color: '#f2c744', glow: '#f2c74480',
     maxHp: 80, moveSpeed: 310,
     basicDmg: 15, basicSpeed: 820, basicCd: 0.25, basicHoming: 0,
-    qCd: 2.8, eCd: 4.5,
-    skills: { ko: { basic: '암습', q: '그림자 도약', e: '칼날 연무' }, en: { basic: 'Shadow Strike', q: 'Shadow Leap', e: 'Blade Whirl' } }
+    qCd: 2.8, eCd: 5.5,
+    skills: { ko: { basic: '암습', q: '그림자 도약', e: '칼날 연무' }, en: { basic: 'Shadow Strike', q: 'Shadow Leap', e: 'Blade Volley' } }
   },
   paladin: {
     color: '#4ade80', glow: '#4ade8080',
@@ -461,8 +474,11 @@ function makeEntity(x, y, color, glow, radius) {
     dashUntil: 0, dashVx: 0, dashVy: 0, hitFlash: 0,
     slowUntil: 0, slowFactor: 1,
     knockbackVx: 0, knockbackVy: 0, knockbackDisplayUntil: 0,
+    hasShield: false, // 팔라딘 1회성 완벽 방어막
     eCharging: false, eChargeStart: 0,
-    qCd: 0, eCd: 0
+    qCd: 0, eCd: 0,
+    // 어쌔신 연사용
+    rapidShotsLeft: 0, rapidShotTimer: 0
   };
 }
 
@@ -481,12 +497,13 @@ let showDamageText = true;
 // ---------- 다국어 (i18n) ----------
 const I18N = {
   ko: {
-    lobbySub: '클래스를 선택하고 전장에 참여하세요',
-    startBtn: '전투 시작', selectDiffBtn: '난이도 선택', settingsBtn: '설정',
+    lobbySub: '전장에 참여하여 승리하세요',
+    startBtn: '전투 시작', selectClassBtn: '클래스 선택', settingsBtn: '설정',
+    classTitle: 'CLASS SELECT', classSub: '전투에 사용할 클래스를 선택하세요', confirmBtn: '확인',
     cNameStriker: 'STRIKER', cDescStriker: '균형 잡힌 원거리 투사체 공격과 대시, 파열구 범위 기술을 사용합니다.',
-    cNameMage: 'ARCANE MAGE', cDescMage: '유도 마탄과 공간 점멸, 강력한 광역 메테오 마법을 다룹니다.',
-    cNameAssassin: 'ASSASSIN', cDescAssassin: '빠른 기동성, 순식간의 그림자 도약과 광범위 칼날 연무 폭딜을 펼칩니다.',
-    cNamePaladin: 'PALADIN', cDescPaladin: '높은 체력을 바탕으로 적을 밀쳐내는 방패 돌진과 충격파를 발사합니다.',
+    cNameMage: 'ARCANE MAGE', cDescMage: '약한 유도 탄환과 조준 점멸, 범위를 일부 축소한 메테오를 사용합니다.',
+    cNameAssassin: 'ASSASSIN', cDescAssassin: '그림자 도약 후, 마우스 방향으로 빠른 암살용 탄환들을 난사합니다.',
+    cNamePaladin: 'PALADIN', cDescPaladin: '근접 충격파 발사 후 다음 받는 1회 피해를 무효화하는 보호막을 획득합니다.',
     settingsTitle: 'SETTINGS', settingsSub: '게임 설정을 변경할 수 있습니다',
     damageTextLabel: '대미지 표시', toggleOn: 'ON', toggleOff: 'OFF', closeBtn: '닫기',
     diffTitle: '난이도 선택', diffSub: '상대의 속도 · 공격 빈도 · 스킬 사용을 결정해요',
@@ -499,12 +516,13 @@ const I18N = {
     statusVictory: 'VICTORY', statusDefeat: 'DEFEAT'
   },
   en: {
-    lobbySub: 'Choose your class and enter the arena',
-    startBtn: 'START BATTLE', selectDiffBtn: 'SELECT DIFFICULTY', settingsBtn: 'SETTINGS',
+    lobbySub: 'Enter the arena and claim your victory',
+    startBtn: 'START BATTLE', selectClassBtn: 'SELECT CLASS', settingsBtn: 'SETTINGS',
+    classTitle: 'CLASS SELECT', classSub: 'Select your class before battle', confirmBtn: 'CONFIRM',
     cNameStriker: 'STRIKER', cDescStriker: 'Balanced ranged pulse shots, directional dash, and radial burst explosion.',
-    cNameMage: 'ARCANE MAGE', cDescMage: 'Homing bolts, instantaneous blink teleportation, and giant meteor blasts.',
-    cNameAssassin: 'ASSASSIN', cDescAssassin: 'High mobility, instant shadow leap, and devastating blade whirl combo.',
-    cNamePaladin: 'PALADIN', cDescPaladin: 'Heavy armor tank with knockback shield charge and holy ground waves.',
+    cNameMage: 'ARCANE MAGE', cDescMage: 'Light homing bolts, instantaneous blink, and nerfed meteor strike.',
+    cNameAssassin: 'ASSASSIN', cDescAssassin: 'High mobility shadow leap and rapid directional blade projectile barrage.',
+    cNamePaladin: 'PALADIN', cDescPaladin: 'Close-range holy burst with a 1-hit invincibility shield after cast.',
     settingsTitle: 'SETTINGS', settingsSub: 'Change your game settings',
     damageTextLabel: 'Damage Numbers', toggleOn: 'ON', toggleOff: 'OFF', closeBtn: 'Close',
     diffTitle: 'SELECT DIFFICULTY', diffSub: "Determines opponent's speed, attack frequency, and skill behavior",
@@ -527,8 +545,13 @@ function applyLanguage(lang) {
   const t = I18N[lang];
 
   document.getElementById('lobbySub').textContent = t.lobbySub;
-  document.getElementById('mainStartBtn').textContent = t.selectDiffBtn;
+  document.getElementById('mainStartBtn').textContent = t.startBtn;
+  document.getElementById('mainClassBtn').textContent = t.selectClassBtn;
   document.getElementById('mainSettingsBtn').textContent = t.settingsBtn;
+
+  document.getElementById('classTitle').textContent = t.classTitle;
+  document.getElementById('classSub').textContent = t.classSub;
+  document.getElementById('closeClassBtn').textContent = t.confirmBtn;
 
   document.getElementById('cNameStriker').textContent = t.cNameStriker;
   document.getElementById('cDescStriker').textContent = t.cDescStriker;
@@ -564,7 +587,6 @@ function applyLanguage(lang) {
 
   document.getElementById('hudHint').innerHTML = t.hudHint;
 
-  // 스킬 UI 텍스트 업데이트
   const cls = CLASSES[selectedClassKey];
   document.getElementById('labelBasic').textContent = cls.skills[lang].basic;
   document.getElementById('labelQ').textContent = cls.skills[lang].q;
@@ -586,7 +608,6 @@ function applyLanguage(lang) {
 document.getElementById('langKoBtn').addEventListener('click', () => applyLanguage('ko'));
 document.getElementById('langEnBtn').addEventListener('click', () => applyLanguage('en'));
 
-// 클래스 선택 이벤트
 function applyClassAccent() {
   document.documentElement.style.setProperty('--class-accent', CLASSES[selectedClassKey].color);
 }
@@ -602,10 +623,10 @@ document.querySelectorAll('.class-card').forEach(card => {
 applyClassAccent();
 
 const DIFFICULTY = {
-  easy:      { speedMult: 0.85, shootMin: 1.5,  shootMax: 2.1,  dmgMult: 0.8,  qCooldown: 6.5, eCooldown: 11,  homing: 0.6 },
-  normal:    { speedMult: 1.05, shootMin: 1.15, shootMax: 1.7,  dmgMult: 1.0,  qCooldown: 4.5, eCooldown: 7.5, homing: 1.6 },
-  hard:      { speedMult: 1.35, shootMin: 0.60, shootMax: 0.9,  dmgMult: 1.3,  qCooldown: 2.5, eCooldown: 4.5, homing: 2.4 },
-  nightmare: { speedMult: 1.50, shootMin: 0.50, shootMax: 0.8,  dmgMult: 1.6,  qCooldown: 1.4, eCooldown: 3.0, homing: 3.0 }
+  easy:      { speedMult: 0.85, shootMin: 1.5,  shootMax: 2.1,  dmgMult: 0.8,  qCooldown: 6.5, eCooldown: 11,  homing: 0.4 },
+  normal:    { speedMult: 1.05, shootMin: 1.15, shootMax: 1.7,  dmgMult: 1.0,  qCooldown: 4.5, eCooldown: 7.5, homing: 1.2 },
+  hard:      { speedMult: 1.35, shootMin: 0.60, shootMax: 0.9,  dmgMult: 1.3,  qCooldown: 2.5, eCooldown: 4.5, homing: 1.8 },
+  nightmare: { speedMult: 1.50, shootMin: 0.50, shootMax: 0.8,  dmgMult: 1.6,  qCooldown: 1.4, eCooldown: 3.0, homing: 2.4 }
 };
 let difficultyKey = 'normal';
 let currentDifficulty = DIFFICULTY[difficultyKey];
@@ -614,6 +635,7 @@ let statusTimer = 0;
 let gameState = 'lobby';
 
 const screenMain = document.getElementById('screenMain');
+const screenClassSelect = document.getElementById('screenClassSelect');
 const screenSettings = document.getElementById('screenSettings');
 const screenDifficulty = document.getElementById('screenDifficulty');
 const screenPause = document.getElementById('screenPause');
@@ -623,6 +645,7 @@ const resultTextEl = document.getElementById('resultText');
 
 function hideAllScreens() {
   screenMain.classList.add('hidden');
+  screenClassSelect.classList.add('hidden');
   screenSettings.classList.add('hidden');
   screenDifficulty.classList.add('hidden');
   screenPause.classList.add('hidden');
@@ -633,6 +656,11 @@ function showMainScreen() {
   gameState = 'lobby';
   hideAllScreens();
   screenMain.classList.remove('hidden');
+}
+
+function showClassSelectScreen() {
+  hideAllScreens();
+  screenClassSelect.classList.remove('hidden');
 }
 
 function showSettingsScreen() {
@@ -671,6 +699,8 @@ function showResultScreen(title, text, resultClass) {
 }
 
 document.getElementById('mainStartBtn').addEventListener('click', showDifficultyScreen);
+document.getElementById('mainClassBtn').addEventListener('click', showClassSelectScreen);
+document.getElementById('closeClassBtn').addEventListener('click', showMainScreen);
 document.getElementById('mainSettingsBtn').addEventListener('click', showSettingsScreen);
 document.getElementById('backToLobbyBtn').addEventListener('click', showMainScreen);
 document.getElementById('closeSettingsBtn').addEventListener('click', () => {
@@ -742,8 +772,10 @@ function resetEntityState(e, x, y, isPlayer) {
   e.dashUntil = 0; e.dashVx = 0; e.dashVy = 0; e.hitFlash = 0;
   e.slowUntil = 0; e.slowFactor = 1;
   e.knockbackVx = 0; e.knockbackVy = 0; e.knockbackDisplayUntil = 0;
+  e.hasShield = false;
   e.eCharging = false; e.eChargeStart = 0;
   e.qCd = 0; e.eCd = 0;
+  e.rapidShotsLeft = 0; e.rapidShotTimer = 0;
 }
 
 function resetRound() {
@@ -757,26 +789,29 @@ function resetRound() {
   cooldowns.basic.cur = 0; cooldowns.q.cur = 0; cooldowns.e.cur = 0;
 }
 
-function fireProjectile(from, tx, ty, color, dmg, owner, speed, homing) {
+function fireProjectile(from, tx, ty, color, dmg, owner, speed, homing, type = 'normal') {
   const dx = tx - from.x, dy = ty - from.y;
   const len = Math.hypot(dx, dy) || 1;
+  
+  // 칼날연무 전용 탄환 타입 분기
+  const radius = type === 'blade' ? 4 : 6;
+  const life = type === 'blade' ? 1.2 : 1.8;
+
   projectiles.push({
     x: from.x, y: from.y,
     vx: (dx / len) * speed, vy: (dy / len) * speed,
-    owner, radius: 6, color, dmg, life: 1.8,
-    homing: homing || 0
+    owner, radius, color, dmg, life,
+    homing: homing || 0,
+    type: type
   });
 }
 
-// 클래스별로 개별화된 이동/보조 스킬 (Q)
-const MAGE_BLINK_RANGE = 300;
 function useQSkill() {
   const cls = CLASSES[selectedClassKey];
   if (selectedClassKey === 'mage') {
-    // ARCANE MAGE: 에임 방향으로 순간 점멸 (사거리 제한, 최대 300px)
     const dx = mouse.x - player.x, dy = mouse.y - player.y;
     const len = Math.hypot(dx, dy) || 1;
-    const blinkDist = Math.min(len, MAGE_BLINK_RANGE);
+    const blinkDist = Math.min(len, 300);
     player.x += (dx / len) * blinkDist;
     player.y += (dy / len) * blinkDist;
     player.x = Math.max(20, Math.min(canvas.width - 20, player.x));
@@ -784,7 +819,6 @@ function useQSkill() {
     spawnDeathParticles(player.x, player.y, cls.color);
     cooldowns.q.cur = cooldowns.q.max;
   } else if (selectedClassKey === 'assassin') {
-    // ASSASSIN: 지정 방향 그림자 순간 도약
     const dx = mouse.x - player.x, dy = mouse.y - player.y;
     const len = Math.hypot(dx, dy) || 1;
     player.x += (dx / len) * 260;
@@ -794,7 +828,6 @@ function useQSkill() {
     spawnDeathParticles(player.x, player.y, cls.color);
     cooldowns.q.cur = cooldowns.q.max;
   } else {
-    // STRIKER & PALADIN: 강한 전방 돌진 (방패 돌진 및 대시)
     const dx = mouse.x - player.x, dy = mouse.y - player.y;
     const len = Math.hypot(dx, dy) || 1;
     const dashSpeed = selectedClassKey === 'paladin' ? 1400 : 1700;
@@ -805,21 +838,24 @@ function useQSkill() {
   }
 }
 
-// 클래스별로 개별화된 궁극기/특수스킬 (E)
+// 특수스킬 (E)
 function castBurst(caster, owner) {
   let radius = 210;
   let dmg = 24;
 
   if (owner === 'player') {
     if (selectedClassKey === 'mage') {
-      // 메테오: 거대 범위 + 압도적인 단일 데미지
-      radius = 320; dmg = 45; 
+      // 메테오 너프: 범위를 기존 320 -> 180으로 대폭 축소
+      radius = 180; dmg = 38; 
     } else if (selectedClassKey === 'assassin') {
-      // 칼날 연무: 적절한 범위, 속사 타격
-      radius = 160; dmg = 28; 
+      // 어쌔신: 조준 방향으로 일정시간 동안 여러개의 칼날 탄환 난사 시작
+      caster.rapidShotsLeft = 12; // 12발 발사
+      caster.rapidShotTimer = 0;
+      return; 
     } else if (selectedClassKey === 'paladin') {
-      // 성스러운 충격: 중범위 + 강한 둔화 효과
-      radius = 250; dmg = 22; 
+      // 팔라딘: 스킬 범위를 대폭 축소 (250 -> 110), 대신 사용 직후 1회용 모든 대미지 무효 보호막 획득
+      radius = 110; dmg = 26;
+      caster.hasShield = true;
     }
   }
 
@@ -846,7 +882,6 @@ function applyEffectsFromBurst(target, sourceX, sourceY, owner) {
   const dx = target.x - sourceX, dy = target.y - sourceY;
   const len = Math.hypot(dx, dy) || 1;
 
-  // 팔라딘의 충격파는 밀쳐내기와 둔화 시간이 훨씬 강력함 (플레이어가 팔라딘일 때, 플레이어가 시전한 경우에만 적용)
   const isPlayerPaladinCast = owner === 'player' && selectedClassKey === 'paladin';
   const power = isPlayerPaladinCast ? 1300 : 780;
   const slowDur = isPlayerPaladinCast ? 4500 : 3000;
@@ -858,13 +893,13 @@ function applyEffectsFromBurst(target, sourceX, sourceY, owner) {
   target.slowFactor = isPlayerPaladinCast ? 0.3 : 0.45;
 }
 
-function spawnDamageText(x, y, amount) {
+function spawnDamageText(x, y, text, color = '#f2b544') {
   if (!showDamageText) return;
   floatingTexts.push({
     x: x + (Math.random() - 0.5) * 20,
     y: y - 10,
-    text: '-' + Math.round(amount),
-    color: '#f2b544',
+    text: text,
+    color: color,
     life: 0.8, maxLife: 0.8
   });
 }
@@ -887,10 +922,19 @@ function spawnDeathParticles(x, y, color) {
 
 function applyDamage(target, dmg, sourceOwner) {
   if (!target.alive) return;
+
+  // 팔라딘 1회성 피격 무효화 보호막 동작
+  if (target.hasShield) {
+    target.hasShield = false;
+    spawnDamageText(target.x, target.y - target.radius, 'BLOCKED!', '#38bdf8');
+    spawnDeathParticles(target.x, target.y, '#38bdf8');
+    return;
+  }
+
   target.hp -= dmg;
   target.hitFlash = 0.15;
 
-  spawnDamageText(target.x, target.y - target.radius, dmg);
+  spawnDamageText(target.x, target.y - target.radius, '-' + Math.round(dmg));
 
   if (target.hp <= 0) {
     target.hp = 0;
@@ -946,6 +990,16 @@ function update(dt) {
     if (statusTimer <= 0) document.getElementById('status').classList.remove('show');
   }
 
+  // 어쌔신 칼날 연무(탄환 난사) 발사 처리
+  if (player.alive && player.rapidShotsLeft > 0) {
+    player.rapidShotTimer -= dt;
+    if (player.rapidShotTimer <= 0) {
+      fireProjectile(player, mouse.x, mouse.y, '#f59e0b', 6, 'player', 950, 0, 'blade');
+      player.rapidShotsLeft--;
+      player.rapidShotTimer = 0.05; // 0.05초 간격 연속 연사
+    }
+  }
+
   // 플레이어 이동 및 제어
   if (player.alive) {
     const cls = CLASSES[selectedClassKey];
@@ -969,19 +1023,19 @@ function update(dt) {
     player.x = Math.max(20, Math.min(canvas.width - 20, player.x));
     player.y = Math.max(20, Math.min(canvas.height - 20, player.y));
 
-    // 기본 공격 발사
+    // 기본 공격
     if (mouse.down && cooldowns.basic.cur <= 0) {
       fireProjectile(player, mouse.x, mouse.y, cls.color, cls.basicDmg, 'player', cls.basicSpeed, cls.basicHoming);
       cooldowns.basic.cur = cooldowns.basic.max;
     }
-    // Q 스킬 발동
+    // Q 스킬
     if (keys['q'] && cooldowns.q.cur <= 0 && !isDashing) {
       useQSkill();
     }
     if (player.hitFlash > 0) player.hitFlash -= dt;
   }
 
-  // BOT AI 업데이트
+  // BOT AI
   if (bot.alive && player.alive) {
     const d = dist(bot.x, bot.y, player.x, player.y);
     const dx = bot.x - player.x, dy = bot.y - player.y;
@@ -1035,7 +1089,7 @@ function update(dt) {
     if (bot.hitFlash > 0) bot.hitFlash -= dt;
   }
 
-  // 투사체 이동 및 조준
+  // 투사체 이동 및 판정
   for (let i = projectiles.length - 1; i >= 0; i--) {
     const p = projectiles[i];
     if (p.homing && player.alive) {
@@ -1064,7 +1118,7 @@ function update(dt) {
     }
   }
 
-  // 특수 오라 및 스킬 히트박스 판정
+  // 특수 오라
   for (let i = auras.length - 1; i >= 0; i--) {
     const a = auras[i];
     a.r += (a.maxR / 0.25) * dt;
@@ -1113,6 +1167,9 @@ function update(dt) {
 
   let chips = '';
   const nowT = now_ms();
+  if (player.hasShield) {
+    chips += `<span class="effect-chip shield">SHIELD (1 HIT)</span>`;
+  }
   if (nowT < player.slowUntil) {
     const remain = ((player.slowUntil - nowT) / 1000).toFixed(1);
     chips += `<span class="effect-chip slow">SLOW ${remain}s</span>`;
@@ -1149,13 +1206,13 @@ function render() {
     ctx.setLineDash([]);
   }
 
-  // E 차징 스킬 범위 시각화
+  // E 차징 범위 시각화
   if (player.eCharging) {
     const cls = CLASSES[selectedClassKey];
     let rad = 210;
-    if (selectedClassKey === 'mage') rad = 320;
-    else if (selectedClassKey === 'assassin') rad = 160;
-    else if (selectedClassKey === 'paladin') rad = 250;
+    if (selectedClassKey === 'mage') rad = 180;
+    else if (selectedClassKey === 'assassin') rad = 120;
+    else if (selectedClassKey === 'paladin') rad = 110;
 
     ctx.beginPath();
     ctx.strokeStyle = cls.color;
@@ -1179,15 +1236,34 @@ function render() {
     ctx.stroke();
   }
 
-  // 투사체
+  // 투사체 그리기 (일반 방울 vs 칼날 탄환)
   for (const p of projectiles) {
-    ctx.beginPath();
-    ctx.fillStyle = p.color;
-    ctx.shadowColor = p.color;
-    ctx.shadowBlur = 10;
-    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
+    ctx.save();
+    if (p.type === 'blade') {
+      // 어쌔신의 얇은 칼날 형태 탄환
+      const angle = Math.atan2(p.vy, p.vx);
+      ctx.translate(p.x, p.y);
+      ctx.rotate(angle);
+      ctx.fillStyle = p.color;
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.moveTo(12, 0);
+      ctx.lineTo(-6, -3);
+      ctx.lineTo(-2, 0);
+      ctx.lineTo(-6, 3);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      // 일반 구형 탄환
+      ctx.beginPath();
+      ctx.fillStyle = p.color;
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = 10;
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
   }
 
   // 사망 파티클
@@ -1224,6 +1300,19 @@ function render() {
 
 function drawEntity(e) {
   if (!e.alive) return;
+
+  // 팔라딘 완벽 무효 보호막 오라 이펙트
+  if (e.hasShield) {
+    ctx.beginPath();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 3;
+    ctx.shadowColor = '#38bdf8';
+    ctx.shadowBlur = 12;
+    ctx.arc(e.x, e.y, e.radius + 7, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
   ctx.beginPath();
   ctx.fillStyle = e.hitFlash > 0 ? '#ffffff' : e.color;
   ctx.shadowColor = e.glow;
