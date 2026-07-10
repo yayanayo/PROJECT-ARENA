@@ -1805,10 +1805,10 @@ document.getElementById('closeModalBtn').addEventListener('click', () => {
 applyClassAccent();
 
 const DIFFICULTY = {
-  easy:      { speedMult: 1.00, shootMin: 1.25,  shootMax: 1.75, dmgMult: 1.00, qCooldown: 5.5, eCooldown: 9.0, homing: 0.38 },
-  normal:    { speedMult: 1.25, shootMin: 0.95, shootMax: 1.35, dmgMult: 1.18, qCooldown: 3.8, eCooldown: 6.2, homing: 0.72 },
-  hard:      { speedMult: 1.55, shootMin: 0.50, shootMax: 0.80, dmgMult: 1.45, qCooldown: 2.1, eCooldown: 3.8, homing: 1.05 },
-  nightmare: { speedMult: 1.80, shootMin: 0.40, shootMax: 0.70, dmgMult: 1.9, qCooldown: 1.0, eCooldown: 2.3, homing: 1.4 }
+  easy:      { speedMult: 0.8, shootMin: 1.25,  shootMax: 1.75, dmgMult: 1.00, qCooldown: 5.5, eCooldown: 9.0, homing: 0.38 },
+  normal:    { speedMult: 1.0, shootMin: 0.95, shootMax: 1.35, dmgMult: 1.18, qCooldown: 3.8, eCooldown: 6.2, homing: 0.72 },
+  hard:      { speedMult: 1.4, shootMin: 0.50, shootMax: 0.80, dmgMult: 1.45, qCooldown: 2.1, eCooldown: 3.8, homing: 1.05 },
+  nightmare: { speedMult: 1.8, shootMin: 0.40, shootMax: 0.70, dmgMult: 1.9, qCooldown: 1.0, eCooldown: 2.3, homing: 1.4 }
 };
 let difficultyKey = 'normal';
 let currentDifficulty = DIFFICULTY[difficultyKey];
