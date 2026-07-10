@@ -226,7 +226,7 @@
     display: none;
     justify-content: space-between;
     align-items: flex-end;
-    pointer-events: auto;
+    pointer-events: none;
     z-index: 12;
     opacity: 0;
     transition: opacity 0.2s ease;
@@ -290,7 +290,6 @@
     font-weight: 700;
     color: var(--text-primary);
     letter-spacing: 1px;
-    cursor: pointer;
   }
   .skill-stick.q { background: rgba(242, 181, 68, 0.18); border-color: rgba(242, 181, 68, 0.28); }
   .skill-stick.e { background: rgba(169, 112, 232, 0.18); border-color: rgba(169, 112, 232, 0.28); }
@@ -301,6 +300,7 @@
     }
     body.show-hud:not(.preview-mode) .mobile-controls {
       opacity: 1;
+      pointer-events: auto;
     }
   }
 
@@ -1080,8 +1080,8 @@
     <div class="stick-base"></div>
     <div class="stick-knob"></div>
     <div class="skill-buttons">
-      <div class="skill-stick q" id="skillQBtn">Q</div>
-      <div class="skill-stick e" id="skillEBtn">E</div>
+      <div class="skill-stick q">Q</div>
+      <div class="skill-stick e">E</div>
     </div>
   </div>
 </div>
@@ -1089,7 +1089,7 @@
 <div class="hud" id="skillbar">
   <div class="skill-slot" id="slotBasic">
     <div class="key">LMB</div>
-    <div class="label" id="labelBasic">공격</label>
+    <div class="label" id="labelBasic">공격</div>
     <div class="cooldown-overlay" id="cdBasic" style="height:0%"></div>
     <div class="cooldown-text" id="cdTextBasic"></div>
   </div>
@@ -1228,39 +1228,51 @@ moveStick.addEventListener('pointerdown', e => handleStickDown(e, 'move'));
 moveStick.addEventListener('pointermove', e => handleStickMove(e, 'move'));
 moveStick.addEventListener('pointerup', e => handleStickUp(e, 'move'));
 moveStick.addEventListener('pointercancel', e => handleStickUp(e, 'move'));
+moveStick.addEventListener('touchstart', e => { e.preventDefault(); handleStickDown(e.changedTouches[0], 'move'); }, { passive: false });
+moveStick.addEventListener('touchmove', e => { e.preventDefault(); handleStickMove(e.changedTouches[0], 'move'); }, { passive: false });
+moveStick.addEventListener('touchend', e => { e.preventDefault(); handleStickUp(e.changedTouches[0], 'move'); }, { passive: false });
 
 attackStick.addEventListener('pointerdown', e => handleStickDown(e, 'attack'));
 attackStick.addEventListener('pointermove', e => handleStickMove(e, 'attack'));
 attackStick.addEventListener('pointerup', e => handleStickUp(e, 'attack'));
 attackStick.addEventListener('pointercancel', e => handleStickUp(e, 'attack'));
+attackStick.addEventListener('touchstart', e => { e.preventDefault(); handleStickDown(e.changedTouches[0], 'attack'); }, { passive: false });
+attackStick.addEventListener('touchmove', e => { e.preventDefault(); handleStickMove(e.changedTouches[0], 'attack'); }, { passive: false });
+attackStick.addEventListener('touchend', e => { e.preventDefault(); handleStickUp(e.changedTouches[0], 'attack'); }, { passive: false });
 
 pauseHint.addEventListener('pointerdown', () => {
   if (gameState === 'playing') pauseGame();
 });
+pauseHint.addEventListener('touchstart', e => {
+  e.preventDefault(); if (gameState === 'playing') pauseGame();
+}, { passive: false });
 
-// 모바일 스킬 버튼 - pointerdown 이벤트만 사용
-const skillQButton = document.getElementById('skillQBtn');
-const skillEButton = document.getElementById('skillEBtn');
-
+const skillQButton = document.querySelector('.skill-stick.q');
+const skillEButton = document.querySelector('.skill-stick.e');
 skillQButton.addEventListener('pointerdown', (e) => {
+  if (e.pointerType !== 'mouse') e.preventDefault();
+  if (gameState === 'playing' && cooldowns.q.cur <= 0) {
+    useQSkill(player, mouse.x, mouse.y, 'player');
+    cooldowns.q.cur = cooldowns.q.max;
+  }
+});
+skillEButton.addEventListener('pointerdown', (e) => {
+  if (e.pointerType !== 'mouse') e.preventDefault();
+  if (gameState === 'playing' && cooldowns.e.cur <= 0 && !player.eCharging) {
+    startCharging();
+  }
+});
+skillQButton.addEventListener('touchstart', (e) => {
   e.preventDefault();
   if (gameState === 'playing' && cooldowns.q.cur <= 0) {
     useQSkill(player, mouse.x, mouse.y, 'player');
     cooldowns.q.cur = cooldowns.q.max;
   }
 });
-
-skillEButton.addEventListener('pointerdown', (e) => {
+skillEButton.addEventListener('touchstart', (e) => {
   e.preventDefault();
   if (gameState === 'playing' && cooldowns.e.cur <= 0 && !player.eCharging) {
     startCharging();
-  }
-});
-
-skillEButton.addEventListener('pointerup', (e) => {
-  e.preventDefault();
-  if (player.eCharging) {
-    releaseCharge();
   }
 });
 
@@ -1368,7 +1380,7 @@ function makeEntity(x, y, color, glow, radius) {
     rapidShotsLeft: 0, rapidShotTimer: 0,
     moveDirTimer: 0, moveDirAngle: 0,
     openingTimer: 0, openingDirY: 0,
-    openingDashLockTimer: 0
+    openingDashLockTimer: 0 // 오프닝 대시 사용 금지 타이머
   };
 }
 
@@ -1718,6 +1730,20 @@ function applyLanguage(lang) {
 
 document.getElementById('langKoBtn').addEventListener('click', () => applyLanguage('ko'));
 document.getElementById('langEnBtn').addEventListener('click', () => applyLanguage('en'));
+document.getElementById('langKoBtn').addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') { e.preventDefault(); applyLanguage('ko'); } });
+document.getElementById('langEnBtn').addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') { e.preventDefault(); applyLanguage('en'); } });
+
+document.querySelector('.skill-stick.q').addEventListener('touchstart', (e) => {
+  e.preventDefault(); if (gameState === 'playing' && cooldowns.q.cur <= 0) {
+    useQSkill(player, mouse.x, mouse.y, 'player');
+    cooldowns.q.cur = cooldowns.q.max;
+  }
+}, { passive: false });
+document.querySelector('.skill-stick.e').addEventListener('touchstart', (e) => {
+  e.preventDefault(); if (gameState === 'playing' && cooldowns.e.cur <= 0 && !player.eCharging) {
+    startCharging();
+  }
+}, { passive: false });
 
 function applyClassAccent() {
   document.documentElement.style.setProperty('--class-accent', CLASSES[selectedClassKey].color);
@@ -1991,7 +2017,11 @@ document.querySelectorAll('button').forEach(element => {
       unlockAudio();
       playSfx('buttonClick');
     });
-  }
+  } 
+  element.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    if (!element.disabled) element.click();
+  }, { passive: false });
 });
 
 document.querySelectorAll('.class-card').forEach(card => {
@@ -2056,6 +2086,7 @@ function now_ms() { return performance.now(); }
 function resetEntityState(e, x, y, isPlayer) {
   let classKey = selectedClassKey;
   if (!isPlayer) {
+    // 상대방 Bot 클래스를 무작위로 선택
     const classKeys = Object.keys(CLASSES);
     classKey = classKeys[Math.floor(Math.random() * classKeys.length)];
   }
@@ -2088,6 +2119,7 @@ function resetEntityState(e, x, y, isPlayer) {
   e.rapidShotsLeft = 0; e.rapidShotTimer = 0;
   e.moveDirTimer = 0; e.moveDirAngle = 0;
   
+  // 시작 직후 즉시 대시 방지용 락 (2.5초 ~ 3.5초)
   e.openingTimer = 2.0 + Math.random() * 1.5;
   e.openingDirY = Math.random() < 0.5 ? -1 : 1;
   e.openingDashLockTimer = 2.5 + Math.random() * 1.0;
@@ -2393,6 +2425,7 @@ function update(dt) {
     const isDashing = now_ms() < bot.dashUntil;
     const botSpeedMult = currentDifficulty.speedMult * (currentMoveSpeed(bot) / 250);
 
+    // 오프닝 대시 사용 금지 타이머 차감
     if (bot.openingDashLockTimer > 0) {
       bot.openingDashLockTimer -= dt;
     }
@@ -2453,6 +2486,7 @@ function update(dt) {
     bot.qCd = Math.max(0, bot.qCd - dt);
     bot.eCd = Math.max(0, bot.eCd - dt);
 
+    // 상대 시작 대시 방지 조건 (openingDashLockTimer <= 0)
     if (!isDashing && bot.qCd <= 0 && bot.openingDashLockTimer <= 0) {
       if (d < 140 || d > 480) {
         useQSkill(bot, player.x, player.y, 'bot');
@@ -2566,6 +2600,7 @@ function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (gameState === 'lobby' && !previewMode) return;
 
+  // 격자 배경
   ctx.strokeStyle = '#1c2530';
   ctx.lineWidth = 1;
   const gridSize = 48;
@@ -2577,6 +2612,7 @@ function render() {
   }
 
   if (!previewMode) {
+    // 조준선
     if (player.alive) {
       ctx.strokeStyle = player.color + '50';
       ctx.setLineDash([4, 6]);
@@ -2587,6 +2623,7 @@ function render() {
       ctx.setLineDash([]);
     }
 
+    // E 차징 시 범위 시각화
     if (player.eCharging) {
       const cls = CLASSES[selectedClassKey];
       let rad = 210;
@@ -2619,6 +2656,7 @@ function render() {
       }
     }
 
+    // 마법사 메테오 가이드 오라
     for (const dm of delayedMeteors) {
       const progress = 1 - (dm.delay / dm.maxDelay);
       ctx.save();
@@ -2645,6 +2683,7 @@ function render() {
       ctx.restore();
     }
 
+    // 특수 폭발 오라
     for (const a of auras) {
       const color = a.owner === 'player' ? CLASSES[selectedClassKey].color : CLASSES[bot.classKey].color;
       ctx.strokeStyle = color;
@@ -2710,6 +2749,7 @@ function render() {
 
   if (previewMode) return;
 
+  // 데미지 텍스트
   ctx.textAlign = 'center';
   ctx.font = '700 18px Orbitron, sans-serif';
   for (const ft of floatingTexts) {
@@ -2724,6 +2764,7 @@ function render() {
   }
 }
 
+// 클래스별 디테일 외형 렌더링
 function drawEntity(e) {
   if (!e.alive) return;
 
@@ -2753,6 +2794,7 @@ function drawEntity(e) {
 
   const mainColor = e.hitFlash > 0 ? '#ffffff' : e.color;
 
+  // 본체 원
   ctx.beginPath();
   ctx.fillStyle = mainColor;
   ctx.shadowColor = e.glow;
@@ -2769,11 +2811,13 @@ function drawEntity(e) {
   }
   ctx.stroke();
 
+  // 클래스별 독특한 심볼 외형 렌더링
   ctx.rotate(e.angle);
   ctx.strokeStyle = mainColor;
   ctx.fillStyle = mainColor;
 
   if (e.classKey === 'striker') {
+    // 테두리 링 + 정면 방향 화살표
     ctx.beginPath();
     ctx.lineWidth = 2;
     ctx.arc(0, 0, e.radius + 4, -Math.PI / 3, Math.PI / 3);
@@ -2786,6 +2830,7 @@ function drawEntity(e) {
     ctx.closePath();
     ctx.fill();
   } else if (e.classKey === 'mage') {
+    // 회전 마법 룬 외곽
     ctx.save();
     ctx.rotate(now_ms() * 0.002);
     ctx.lineWidth = 1.5;
@@ -2805,6 +2850,7 @@ function drawEntity(e) {
     ctx.fillStyle = '#ffffff';
     ctx.fill();
   } else if (e.classKey === 'assassin') {
+    // 암살자 십자 날카로운 마크
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(-e.radius - 2, 0); ctx.lineTo(e.radius + 2, 0);
@@ -2818,6 +2864,7 @@ function drawEntity(e) {
     ctx.closePath();
     ctx.fill();
   } else if (e.classKey === 'paladin') {
+    // 팔라딘 전방 성스러운 방패 오라
     ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.arc(0, 0, e.radius + 5, -Math.PI / 2.5, Math.PI / 2.5);
