@@ -69,22 +69,15 @@
     pointer-events: none;
   }
   
-  /* 🔧 수정: 모바일 컨트롤은 show-hud 상태일 때만 클릭 가능 */
-  body.mobile-ui .mobile-controls,
-  body.mobile-ui .mobile-controls * {
+  /* 🔧 핵심 수정: 모바일 컨트롤은 항상 비활성화 */
+  .mobile-controls,
+  .mobile-controls * {
     pointer-events: none !important;
   }
-  body.mobile-ui.show-hud:not(.preview-mode) .mobile-controls,
-  body.mobile-ui.show-hud:not(.preview-mode) .mobile-controls * {
-    pointer-events: auto !important;
-  }
   
-  body.mobile-ui #pauseHint {
+  /* 🔧 pauseHint도 기본적으로 비활성화 */
+  #pauseHint {
     pointer-events: none;
-  }
-  body.mobile-ui.show-hud:not(.preview-mode) #pauseHint {
-    pointer-events: auto;
-    cursor: pointer;
   }
 
   /* Topbar */
@@ -216,7 +209,6 @@
     letter-spacing: 1px;
     color: var(--text-dim);
     text-transform: uppercase;
-    pointer-events: none;
     opacity: 0;
     transition: opacity 0.2s ease, visibility 0.2s ease;
     z-index: 15;
@@ -224,6 +216,7 @@
   body.show-hud:not(.preview-mode) #pauseHint {
     visibility: visible;
     opacity: 1;
+    pointer-events: auto; /* 🔧 게임 중일 때만 활성화 */
   }
 
   .mobile-controls {
@@ -235,7 +228,6 @@
     display: none;
     justify-content: space-between;
     align-items: flex-end;
-    pointer-events: none;
     z-index: 12;
     opacity: 0;
     transition: opacity 0.2s ease;
@@ -309,6 +301,11 @@
     }
     body.show-hud:not(.preview-mode) .mobile-controls {
       opacity: 1;
+    }
+    /* 🔧 모바일에서는 게임 중에만 컨트롤 활성화 */
+    body.show-hud:not(.preview-mode) .mobile-controls,
+    body.show-hud:not(.preview-mode) .mobile-controls * {
+      pointer-events: auto !important;
     }
   }
 
@@ -433,7 +430,8 @@
   }
   .ui-preview .preview-slot {
     position: relative;
-    width: 100px; height: 90px;
+    width: 100px;
+    height: 90px;
     background: rgba(255,255,255,0.04);
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 16px;
@@ -856,7 +854,8 @@
     z-index: 2;
   }
   .ui-preview-modal .preview-skillbar .preview-slot {
-    width: 90px; height: 90px;
+    width: 90px;
+    height: 90px;
     background: var(--panel-bg);
     border: 2px solid var(--panel-border);
     border-radius: 16px;
@@ -1152,8 +1151,10 @@ const attackStick = document.getElementById('attackStick');
 const pauseHint = document.getElementById('pauseHint');
 let activeStickPointers = { move: null, attack: null };
 
+let isMobile = false;
 function setMobileMode() {
   document.body.classList.add('mobile-ui');
+  isMobile = true;
   pauseHint.textContent = I18N[currentLang].pauseBtnText;
 }
 
@@ -1248,23 +1249,41 @@ attackStick.addEventListener('touchstart', e => { e.preventDefault(); handleStic
 attackStick.addEventListener('touchmove', e => { e.preventDefault(); handleStickMove(e.changedTouches[0], 'attack'); }, { passive: false });
 attackStick.addEventListener('touchend', e => { e.preventDefault(); handleStickUp(e.changedTouches[0], 'attack'); }, { passive: false });
 
+// 🔧 pauseHint 클릭 이벤트 수정
 pauseHint.addEventListener('click', () => {
   if (gameState === 'playing') pauseGame();
 });
+pauseHint.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  if (gameState === 'playing') pauseGame();
+}, { passive: false });
 
 const skillQButton = document.querySelector('.skill-stick.q');
 const skillEButton = document.querySelector('.skill-stick.e');
-skillQButton.addEventListener('click', () => {
+skillQButton.addEventListener('click', (e) => {
   if (gameState === 'playing' && cooldowns.q.cur <= 0) {
     useQSkill(player, mouse.x, mouse.y, 'player');
     cooldowns.q.cur = cooldowns.q.max;
   }
 });
-skillEButton.addEventListener('click', () => {
+skillEButton.addEventListener('click', (e) => {
   if (gameState === 'playing' && cooldowns.e.cur <= 0 && !player.eCharging) {
     startCharging();
   }
 });
+skillQButton.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  if (gameState === 'playing' && cooldowns.q.cur <= 0) {
+    useQSkill(player, mouse.x, mouse.y, 'player');
+    cooldowns.q.cur = cooldowns.q.max;
+  }
+}, { passive: false });
+skillEButton.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  if (gameState === 'playing' && cooldowns.e.cur <= 0 && !player.eCharging) {
+    startCharging();
+  }
+}, { passive: false });
 
 if ('ontouchstart' in window || navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches) {
   setMobileMode();
@@ -1713,14 +1732,23 @@ function applyLanguage(lang) {
     resultTextEl.textContent = t.resultDefeatText;
   }
 
+  // 🔧 언어 버튼 활성화 상태 업데이트
   document.getElementById('langKoBtn').classList.toggle('active', lang === 'ko');
   document.getElementById('langEnBtn').classList.toggle('active', lang === 'en');
   document.documentElement.lang = lang;
 }
 
-// 🔧 수정: 언어 버튼은 click 이벤트만 사용
+// 🔧 언어 버튼 이벤트 리스너 - click과 touchstart 모두 처리
 document.getElementById('langKoBtn').addEventListener('click', () => applyLanguage('ko'));
 document.getElementById('langEnBtn').addEventListener('click', () => applyLanguage('en'));
+document.getElementById('langKoBtn').addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  applyLanguage('ko');
+}, { passive: false });
+document.getElementById('langEnBtn').addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  applyLanguage('en');
+}, { passive: false });
 
 document.querySelector('.skill-stick.q').addEventListener('touchstart', (e) => {
   e.preventDefault(); if (gameState === 'playing' && cooldowns.q.cur <= 0) {
@@ -1746,6 +1774,16 @@ document.querySelectorAll('.class-card').forEach(card => {
     applyClassAccent();
     applyLanguage(currentLang);
   });
+  // 🔧 모바일용 touchstart 추가
+  card.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if(e.target.classList.contains('skill-detail-btn')) return;
+    document.querySelectorAll('.class-card').forEach(c => c.classList.remove('active'));
+    card.classList.add('active');
+    selectedClassKey = card.dataset.class;
+    applyClassAccent();
+    applyLanguage(currentLang);
+  }, { passive: false });
 });
 
 // 스킬 설명 모달 기능
@@ -1755,6 +1793,13 @@ document.querySelectorAll('.skill-detail-btn').forEach(btn => {
     const classKey = btn.dataset.classDetail;
     openSkillDetailModal(classKey);
   });
+  // 🔧 모바일용 touchstart 추가
+  btn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const classKey = btn.dataset.classDetail;
+    openSkillDetailModal(classKey);
+  }, { passive: false });
 });
 
 function openSkillDetailModal(classKey) {
@@ -1790,6 +1835,11 @@ function openSkillDetailModal(classKey) {
 document.getElementById('closeModalBtn').addEventListener('click', () => {
   document.getElementById('skillDetailModal').classList.add('hidden');
 });
+// 🔧 모바일용 touchstart 추가
+document.getElementById('closeModalBtn').addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  document.getElementById('skillDetailModal').classList.add('hidden');
+}, { passive: false });
 
 applyClassAccent();
 
@@ -1889,12 +1939,21 @@ function showResultScreen(title, text, resultClass) {
   screenResult.classList.remove('hidden');
 }
 
-document.getElementById('mainStartBtn').addEventListener('click', showDifficultyScreen);
-document.getElementById('mainClassBtn').addEventListener('click', showClassSelectScreen);
-document.getElementById('closeClassBtn').addEventListener('click', showMainScreen);
-document.getElementById('mainSettingsBtn').addEventListener('click', showSettingsScreen);
-document.getElementById('backToLobbyBtn').addEventListener('click', showMainScreen);
-document.getElementById('closeSettingsBtn').addEventListener('click', () => {
+// 🔧 모든 버튼에 click과 touchstart 이벤트 추가
+function addClickHandler(element, handler) {
+  element.addEventListener('click', handler);
+  element.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    handler(e);
+  }, { passive: false });
+}
+
+addClickHandler(document.getElementById('mainStartBtn'), showDifficultyScreen);
+addClickHandler(document.getElementById('mainClassBtn'), showClassSelectScreen);
+addClickHandler(document.getElementById('closeClassBtn'), showMainScreen);
+addClickHandler(document.getElementById('mainSettingsBtn'), showSettingsScreen);
+addClickHandler(document.getElementById('backToLobbyBtn'), showMainScreen);
+addClickHandler(document.getElementById('closeSettingsBtn'), () => {
   if (gameState === 'paused') {
     screenPause.classList.remove('hidden');
     screenSettings.classList.add('hidden');
@@ -1904,7 +1963,7 @@ document.getElementById('closeSettingsBtn').addEventListener('click', () => {
 });
 
 const toggleDamageTextBtn = document.getElementById('toggleDamageTextBtn');
-toggleDamageTextBtn.addEventListener('click', () => {
+addClickHandler(toggleDamageTextBtn, () => {
   showDamageText = !showDamageText;
   const t = I18N[currentLang];
   toggleDamageTextBtn.textContent = showDamageText ? t.toggleOn : t.toggleOff;
@@ -1967,8 +2026,8 @@ const openUiPreviewBtn = document.getElementById('openUiPreviewBtn');
 const uiPreviewModal = document.getElementById('uiPreviewModal');
 const closeUiPreviewBtn = document.getElementById('closeUiPreviewBtn');
 
-openUiPreviewBtn.addEventListener('click', enterPreviewMode);
-closeUiPreviewBtn.addEventListener('click', exitPreviewMode);
+addClickHandler(openUiPreviewBtn, enterPreviewMode);
+addClickHandler(closeUiPreviewBtn, exitPreviewMode);
 
 uiPreviewModal.addEventListener('click', (e) => {
   if (e.target === uiPreviewModal) {
@@ -1991,21 +2050,12 @@ document.body.addEventListener('pointerdown', unlockAudio, { once: true });
 document.body.addEventListener('pointermove', unlockAudio, { once: true });
 document.body.addEventListener('keydown', unlockAudio, { once: true });
 
-// 🔧 수정: 모든 버튼에 click 이벤트만 사용, touchend 제거
+// 🔧 버튼 호버 효과 - PC용
 document.querySelectorAll('button').forEach(element => {
-  if (element.closest('.class-card')) {
-    element.addEventListener('click', () => {
-      unlockAudio();
-      playSfx('buttonClick');
-    });
-  } else {
+  if (!element.closest('.class-card')) {
     element.addEventListener('mouseenter', () => {
       unlockAudio();
       playSfx('buttonHover');
-    });
-    element.addEventListener('click', () => {
-      unlockAudio();
-      playSfx('buttonClick');
     });
   }
 });
@@ -2015,21 +2065,16 @@ document.querySelectorAll('.class-card').forEach(card => {
     unlockAudio();
     playHoverSfx();
   });
-  card.addEventListener('click', (e) => {
-    if (e.target.closest('button')) return;
-    unlockAudio();
-    playSfx('buttonClick');
-  });
 });
 
-document.getElementById('confirmStartBtn').addEventListener('click', startMatch);
-document.getElementById('resumeBtn').addEventListener('click', resumeGame);
-document.getElementById('pauseToLobbyBtn').addEventListener('click', showMainScreen);
-document.getElementById('retryBtn').addEventListener('click', showDifficultyScreen);
-document.getElementById('toLobbyBtn').addEventListener('click', showMainScreen);
+addClickHandler(document.getElementById('confirmStartBtn'), startMatch);
+addClickHandler(document.getElementById('resumeBtn'), resumeGame);
+addClickHandler(document.getElementById('pauseToLobbyBtn'), showMainScreen);
+addClickHandler(document.getElementById('retryBtn'), showDifficultyScreen);
+addClickHandler(document.getElementById('toLobbyBtn'), showMainScreen);
 
 document.querySelectorAll('.diff-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
+  addClickHandler(btn, () => {
     document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     difficultyKey = btn.dataset.diff;
