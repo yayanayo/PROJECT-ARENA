@@ -68,12 +68,23 @@
   body.mobile-ui .hud {
     pointer-events: none;
   }
-  body.mobile-ui #pauseHint,
+  
+  /* 🔧 수정: 모바일 컨트롤은 show-hud 상태일 때만 클릭 가능 */
+  body.mobile-ui .mobile-controls,
   body.mobile-ui .mobile-controls * {
-    pointer-events: auto;
+    pointer-events: none !important;
   }
-  body.mobile-ui.show-hud:not(.preview-mode) .mobile-controls {
+  body.mobile-ui.show-hud:not(.preview-mode) .mobile-controls,
+  body.mobile-ui.show-hud:not(.preview-mode) .mobile-controls * {
+    pointer-events: auto !important;
+  }
+  
+  body.mobile-ui #pauseHint {
+    pointer-events: none;
+  }
+  body.mobile-ui.show-hud:not(.preview-mode) #pauseHint {
     pointer-events: auto;
+    cursor: pointer;
   }
 
   /* Topbar */
@@ -213,10 +224,6 @@
   body.show-hud:not(.preview-mode) #pauseHint {
     visibility: visible;
     opacity: 1;
-  }
-  body.mobile-ui #pauseHint {
-    pointer-events: auto;
-    cursor: pointer;
   }
 
   .mobile-controls {
@@ -1241,37 +1248,19 @@ attackStick.addEventListener('touchstart', e => { e.preventDefault(); handleStic
 attackStick.addEventListener('touchmove', e => { e.preventDefault(); handleStickMove(e.changedTouches[0], 'attack'); }, { passive: false });
 attackStick.addEventListener('touchend', e => { e.preventDefault(); handleStickUp(e.changedTouches[0], 'attack'); }, { passive: false });
 
-pauseHint.addEventListener('pointerdown', () => {
+pauseHint.addEventListener('click', () => {
   if (gameState === 'playing') pauseGame();
 });
-pauseHint.addEventListener('touchstart', e => {
-  e.preventDefault(); if (gameState === 'playing') pauseGame();
-}, { passive: false });
 
 const skillQButton = document.querySelector('.skill-stick.q');
 const skillEButton = document.querySelector('.skill-stick.e');
-skillQButton.addEventListener('pointerdown', (e) => {
-  if (e.pointerType !== 'mouse') e.preventDefault();
+skillQButton.addEventListener('click', () => {
   if (gameState === 'playing' && cooldowns.q.cur <= 0) {
     useQSkill(player, mouse.x, mouse.y, 'player');
     cooldowns.q.cur = cooldowns.q.max;
   }
 });
-skillEButton.addEventListener('pointerdown', (e) => {
-  if (e.pointerType !== 'mouse') e.preventDefault();
-  if (gameState === 'playing' && cooldowns.e.cur <= 0 && !player.eCharging) {
-    startCharging();
-  }
-});
-skillQButton.addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  if (gameState === 'playing' && cooldowns.q.cur <= 0) {
-    useQSkill(player, mouse.x, mouse.y, 'player');
-    cooldowns.q.cur = cooldowns.q.max;
-  }
-});
-skillEButton.addEventListener('touchstart', (e) => {
-  e.preventDefault();
+skillEButton.addEventListener('click', () => {
   if (gameState === 'playing' && cooldowns.e.cur <= 0 && !player.eCharging) {
     startCharging();
   }
@@ -1729,14 +1718,9 @@ function applyLanguage(lang) {
   document.documentElement.lang = lang;
 }
 
+// 🔧 수정: 언어 버튼은 click 이벤트만 사용
 document.getElementById('langKoBtn').addEventListener('click', () => applyLanguage('ko'));
 document.getElementById('langEnBtn').addEventListener('click', () => applyLanguage('en'));
-document.getElementById('langKoBtn').addEventListener('pointerdown', (e) => { 
-  if (e.pointerType !== 'mouse') applyLanguage('ko'); 
-});
-document.getElementById('langEnBtn').addEventListener('pointerdown', (e) => { 
-  if (e.pointerType !== 'mouse') applyLanguage('en'); 
-});
 
 document.querySelector('.skill-stick.q').addEventListener('touchstart', (e) => {
   e.preventDefault(); if (gameState === 'playing' && cooldowns.q.cur <= 0) {
@@ -2007,33 +1991,31 @@ document.body.addEventListener('pointerdown', unlockAudio, { once: true });
 document.body.addEventListener('pointermove', unlockAudio, { once: true });
 document.body.addEventListener('keydown', unlockAudio, { once: true });
 
+// 🔧 수정: 모든 버튼에 click 이벤트만 사용, touchend 제거
 document.querySelectorAll('button').forEach(element => {
   if (element.closest('.class-card')) {
-    element.addEventListener('pointerdown', () => {
+    element.addEventListener('click', () => {
       unlockAudio();
       playSfx('buttonClick');
     });
   } else {
-    element.addEventListener('pointerenter', () => {
+    element.addEventListener('mouseenter', () => {
       unlockAudio();
       playSfx('buttonHover');
     });
-    element.addEventListener('pointerdown', () => {
+    element.addEventListener('click', () => {
       unlockAudio();
       playSfx('buttonClick');
     });
-  } 
-  element.addEventListener('touchend', (e) => {
-    if (!element.disabled) element.click();
-  }, { passive: true });
+  }
 });
 
 document.querySelectorAll('.class-card').forEach(card => {
-  card.addEventListener('pointerenter', () => {
+  card.addEventListener('mouseenter', () => {
     unlockAudio();
     playHoverSfx();
   });
-  card.addEventListener('pointerdown', (e) => {
+  card.addEventListener('click', (e) => {
     if (e.target.closest('button')) return;
     unlockAudio();
     playSfx('buttonClick');
