@@ -69,8 +69,10 @@
     pointer-events: none;
   }
   body.mobile-ui #pauseHint,
-  body.mobile-ui .mobile-controls,
   body.mobile-ui .mobile-controls * {
+    pointer-events: auto;
+  }
+  body.mobile-ui.show-hud:not(.preview-mode) .mobile-controls {
     pointer-events: auto;
   }
 
@@ -300,7 +302,6 @@
     }
     body.show-hud:not(.preview-mode) .mobile-controls {
       opacity: 1;
-      pointer-events: auto;
     }
   }
 
@@ -1380,7 +1381,7 @@ function makeEntity(x, y, color, glow, radius) {
     rapidShotsLeft: 0, rapidShotTimer: 0,
     moveDirTimer: 0, moveDirAngle: 0,
     openingTimer: 0, openingDirY: 0,
-    openingDashLockTimer: 0 // 오프닝 대시 사용 금지 타이머
+    openingDashLockTimer: 0
   };
 }
 
@@ -1600,7 +1601,7 @@ const I18N = {
     lobbySub: '전장에 참여하여 승리하세요',
     startBtn: '전투 시작', selectClassBtn: '클래스 선택', settingsBtn: '설정',
     classTitle: 'CLASS SELECT', classSub: '전투에 사용할 클래스를 선택하세요', confirmBtn: '확인',
-      cNameStriker: '스트라이커', cDescStriker: '균형 잡힌 원거리 투사체 공격과 대시, 파열구 범위 기술을 사용합니다.',
+    cNameStriker: '스트라이커', cDescStriker: '균형 잡힌 원거리 투사체 공격과 대시, 파열구 범위 기술을 사용합니다.',
     cNameMage: '아케인 메이지', cDescMage: '약한 유도 탄환과 점멸, 마우스 위치에 1초 뒤 낙하하는 메테오를 사용합니다.',
     cNameAssassin: '어쌔신', cDescAssassin: '그림자 도약 후, 마우스 방향으로 빠른 암살용 칼날 탄환들을 난사합니다.',
     cNamePaladin: '팔라딘', cDescPaladin: '근접 충격파 발사 후 대미지를 2회 막아주는 성스러운 보호막을 획득합니다.',
@@ -1730,8 +1731,12 @@ function applyLanguage(lang) {
 
 document.getElementById('langKoBtn').addEventListener('click', () => applyLanguage('ko'));
 document.getElementById('langEnBtn').addEventListener('click', () => applyLanguage('en'));
-document.getElementById('langKoBtn').addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') { e.preventDefault(); applyLanguage('ko'); } });
-document.getElementById('langEnBtn').addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') { e.preventDefault(); applyLanguage('en'); } });
+document.getElementById('langKoBtn').addEventListener('pointerdown', (e) => { 
+  if (e.pointerType !== 'mouse') applyLanguage('ko'); 
+});
+document.getElementById('langEnBtn').addEventListener('pointerdown', (e) => { 
+  if (e.pointerType !== 'mouse') applyLanguage('en'); 
+});
 
 document.querySelector('.skill-stick.q').addEventListener('touchstart', (e) => {
   e.preventDefault(); if (gameState === 'playing' && cooldowns.q.cur <= 0) {
@@ -2019,9 +2024,8 @@ document.querySelectorAll('button').forEach(element => {
     });
   } 
   element.addEventListener('touchend', (e) => {
-    e.preventDefault();
     if (!element.disabled) element.click();
-  }, { passive: false });
+  }, { passive: true });
 });
 
 document.querySelectorAll('.class-card').forEach(card => {
@@ -2086,7 +2090,6 @@ function now_ms() { return performance.now(); }
 function resetEntityState(e, x, y, isPlayer) {
   let classKey = selectedClassKey;
   if (!isPlayer) {
-    // 상대방 Bot 클래스를 무작위로 선택
     const classKeys = Object.keys(CLASSES);
     classKey = classKeys[Math.floor(Math.random() * classKeys.length)];
   }
@@ -2119,7 +2122,6 @@ function resetEntityState(e, x, y, isPlayer) {
   e.rapidShotsLeft = 0; e.rapidShotTimer = 0;
   e.moveDirTimer = 0; e.moveDirAngle = 0;
   
-  // 시작 직후 즉시 대시 방지용 락 (2.5초 ~ 3.5초)
   e.openingTimer = 2.0 + Math.random() * 1.5;
   e.openingDirY = Math.random() < 0.5 ? -1 : 1;
   e.openingDashLockTimer = 2.5 + Math.random() * 1.0;
@@ -2297,7 +2299,7 @@ function applyDamage(target, dmg, sourceOwner) {
   if (target.hp <= 0) {
     target.hp = 0;
     target.alive = false;
-      roundEnding = true;
+    roundEnding = true;
     if (sourceOwner === 'player') {
       lastResultKind = 'win';
       playSfx('victory');
@@ -2425,7 +2427,6 @@ function update(dt) {
     const isDashing = now_ms() < bot.dashUntil;
     const botSpeedMult = currentDifficulty.speedMult * (currentMoveSpeed(bot) / 250);
 
-    // 오프닝 대시 사용 금지 타이머 차감
     if (bot.openingDashLockTimer > 0) {
       bot.openingDashLockTimer -= dt;
     }
@@ -2486,7 +2487,6 @@ function update(dt) {
     bot.qCd = Math.max(0, bot.qCd - dt);
     bot.eCd = Math.max(0, bot.eCd - dt);
 
-    // 상대 시작 대시 방지 조건 (openingDashLockTimer <= 0)
     if (!isDashing && bot.qCd <= 0 && bot.openingDashLockTimer <= 0) {
       if (d < 140 || d > 480) {
         useQSkill(bot, player.x, player.y, 'bot');
@@ -2600,7 +2600,6 @@ function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (gameState === 'lobby' && !previewMode) return;
 
-  // 격자 배경
   ctx.strokeStyle = '#1c2530';
   ctx.lineWidth = 1;
   const gridSize = 48;
@@ -2612,7 +2611,6 @@ function render() {
   }
 
   if (!previewMode) {
-    // 조준선
     if (player.alive) {
       ctx.strokeStyle = player.color + '50';
       ctx.setLineDash([4, 6]);
@@ -2623,7 +2621,6 @@ function render() {
       ctx.setLineDash([]);
     }
 
-    // E 차징 시 범위 시각화
     if (player.eCharging) {
       const cls = CLASSES[selectedClassKey];
       let rad = 210;
@@ -2656,7 +2653,6 @@ function render() {
       }
     }
 
-    // 마법사 메테오 가이드 오라
     for (const dm of delayedMeteors) {
       const progress = 1 - (dm.delay / dm.maxDelay);
       ctx.save();
@@ -2683,7 +2679,6 @@ function render() {
       ctx.restore();
     }
 
-    // 특수 폭발 오라
     for (const a of auras) {
       const color = a.owner === 'player' ? CLASSES[selectedClassKey].color : CLASSES[bot.classKey].color;
       ctx.strokeStyle = color;
@@ -2749,7 +2744,6 @@ function render() {
 
   if (previewMode) return;
 
-  // 데미지 텍스트
   ctx.textAlign = 'center';
   ctx.font = '700 18px Orbitron, sans-serif';
   for (const ft of floatingTexts) {
@@ -2764,7 +2758,6 @@ function render() {
   }
 }
 
-// 클래스별 디테일 외형 렌더링
 function drawEntity(e) {
   if (!e.alive) return;
 
@@ -2794,7 +2787,6 @@ function drawEntity(e) {
 
   const mainColor = e.hitFlash > 0 ? '#ffffff' : e.color;
 
-  // 본체 원
   ctx.beginPath();
   ctx.fillStyle = mainColor;
   ctx.shadowColor = e.glow;
@@ -2811,13 +2803,11 @@ function drawEntity(e) {
   }
   ctx.stroke();
 
-  // 클래스별 독특한 심볼 외형 렌더링
   ctx.rotate(e.angle);
   ctx.strokeStyle = mainColor;
   ctx.fillStyle = mainColor;
 
   if (e.classKey === 'striker') {
-    // 테두리 링 + 정면 방향 화살표
     ctx.beginPath();
     ctx.lineWidth = 2;
     ctx.arc(0, 0, e.radius + 4, -Math.PI / 3, Math.PI / 3);
@@ -2830,7 +2820,6 @@ function drawEntity(e) {
     ctx.closePath();
     ctx.fill();
   } else if (e.classKey === 'mage') {
-    // 회전 마법 룬 외곽
     ctx.save();
     ctx.rotate(now_ms() * 0.002);
     ctx.lineWidth = 1.5;
@@ -2850,7 +2839,6 @@ function drawEntity(e) {
     ctx.fillStyle = '#ffffff';
     ctx.fill();
   } else if (e.classKey === 'assassin') {
-    // 암살자 십자 날카로운 마크
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(-e.radius - 2, 0); ctx.lineTo(e.radius + 2, 0);
@@ -2864,7 +2852,6 @@ function drawEntity(e) {
     ctx.closePath();
     ctx.fill();
   } else if (e.classKey === 'paladin') {
-    // 팔라딘 전방 성스러운 방패 오라
     ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.arc(0, 0, e.radius + 5, -Math.PI / 2.5, Math.PI / 2.5);
