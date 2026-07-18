@@ -264,10 +264,10 @@
 
     .mobile-stick {
       position: relative;
-      width: clamp(96px, 26vw, 124px);
-      height: clamp(96px, 26vw, 124px);
-      min-width: 96px;
-      min-height: 96px;
+      width: clamp(80px, 22vw, 104px);
+      height: clamp(80px, 22vw, 104px);
+      min-width: 80px;
+      min-height: 80px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -291,8 +291,8 @@
     }
 
     .attack-stick {
-      width: clamp(108px, 29vw, 136px);
-      height: clamp(108px, 29vw, 136px);
+      width: clamp(92px, 25vw, 116px);
+      height: clamp(92px, 25vw, 116px);
     }
 
     .stick-base {
@@ -306,8 +306,8 @@
 
     .stick-knob {
       position: absolute;
-      width: 46px;
-      height: 46px;
+      width: 38px;
+      height: 38px;
       border-radius: 50%;
       background: rgba(255, 255, 255, 0.14);
       border: 2px solid rgba(255, 255, 255, 0.2);
@@ -319,15 +319,15 @@
       bottom: 110%;
       right: 0;
       display: flex;
-      gap: 12px;
-      margin-bottom: 10px;
+      gap: 10px;
+      margin-bottom: 8px;
       pointer-events: none;
     }
 
     .skill-stick {
       position: relative;
-      width: clamp(68px, 18vw, 84px);
-      height: clamp(68px, 18vw, 84px);
+      width: clamp(56px, 15vw, 70px);
+      height: clamp(56px, 15vw, 70px);
       border-radius: 50%;
       background: rgba(255, 255, 255, 0.09);
       border: 2px solid rgba(255, 255, 255, 0.14);
@@ -353,8 +353,8 @@
     }
 
     .skill-stick .stick-knob {
-      width: 30px;
-      height: 30px;
+      width: 24px;
+      height: 24px;
     }
 
     .skill-stick .stick-label {
@@ -1599,7 +1599,16 @@
       document.body.classList.remove('preview-mode');
       if (typeof uiPreviewModal !== 'undefined') uiPreviewModal.classList.add('hidden');
     }
-    function showMainScreen() { hidePreviewModal(); gameState = 'lobby'; hideAllScreens(); screenMain.classList.remove('hidden'); document.body.classList.remove('show-hud'); }
+    function exitMobileFullscreen() {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) return;
+      const exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+      if (!exit) return;
+      try {
+        const result = exit.call(document);
+        if (result && result.catch) result.catch(() => { });
+      } catch (err) { }
+    }
+    function showMainScreen() { hidePreviewModal(); exitMobileFullscreen(); gameState = 'lobby'; hideAllScreens(); screenMain.classList.remove('hidden'); document.body.classList.remove('show-hud'); }
     function showClassSelectScreen() { hidePreviewModal(); hideAllScreens(); screenClassSelect.classList.remove('hidden'); document.body.classList.remove('show-hud'); }
     function showSettingsScreen() { hidePreviewModal(); hideAllScreens(); screenSettings.classList.remove('hidden'); document.body.classList.remove('show-hud'); }
     function showDifficultyScreen() { hidePreviewModal(); gameState = 'lobby'; hideAllScreens(); screenDifficulty.classList.remove('hidden'); document.body.classList.remove('show-hud'); }
@@ -1709,8 +1718,24 @@
       });
     });
 
+    // 🔧 Best-effort fullscreen on any platform — must be called directly inside a real user
+    // gesture (click/tap), which startMatch() below is, since it's wired up through
+    // addClickHandler's click/touchstart listener. Wrapped in try/catch and silently
+    // ignored if unsupported (e.g. iPhone Safari doesn't support the Fullscreen API at all),
+    // so it never blocks the match from starting.
+    function requestMobileFullscreen() {
+      const el = document.documentElement;
+      const request = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+      if (!request) return;
+      try {
+        const result = request.call(el);
+        if (result && result.catch) result.catch(() => { });
+      } catch (err) { }
+    }
+
     function startMatch() {
       hidePreviewModal();
+      requestMobileFullscreen();
       currentDifficulty = DIFFICULTY[difficultyKey];
       resetRound();
       previewMode = false;
