@@ -1,1528 +1,2489 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
-<meta charset="UTF-8">
-<title>PROJECT: ARENA</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg-void: #0a0e14; --bg-arena: #12181f; --grid-line: #1c2530;
-    --accent-player: #4fd6c4; --accent-player-glow: #4fd6c480;
-    --accent-enemy: #e0554f; --accent-enemy-glow: #e0554f80;
-    --accent-skill-q: #f2b544; --accent-skill-e: #a970e8; --accent-slow: #5aa9e6;
-    --diff-easy: #4ade80; --diff-normal: #f2c744; --diff-hard: #ef4444; --diff-nightmare: #b869f0;
-    --text-primary: #e8edf2; --text-dim: #5c6a7a;
-    --panel-bg: #0e131aee; --panel-border: #232e3a; --ui-scale: 1;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { width: 100%; height: 100%; background: var(--bg-void); overflow: hidden; font-family: 'Rajdhani', sans-serif; color: var(--text-primary); touch-action: manipulation; }
-  button, .action-btn, .lang-btn, .diff-btn, .skill-detail-btn { touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; }
-  #arena { position: fixed; inset: 0; display: block; background: var(--bg-arena); cursor: crosshair; z-index: 0; }
-  .hud { position: fixed; pointer-events: none; user-select: none; z-index: 10; }
-  #topbar { top: calc(20px / var(--ui-scale)); left: calc(24px / var(--ui-scale)); width: calc((100% - 48px) / var(--ui-scale)); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; }
-  .hud-player-side { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; justify-self: start; max-width: min(45vw, 320px); }
-  .hud-enemy-side { display: flex; flex-direction: column; align-items: flex-end; min-width: 0; justify-self: end; max-width: min(45vw, 320px); }
-  .name-tag { font-family: 'Orbitron', sans-serif; font-size: 15px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; }
-  .hp-bar-wrap { width: clamp(220px, 24vw, 320px); min-width: 180px; max-width: 320px; height: 24px; background: #00000080; border: 2px solid var(--panel-border); position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-  .hp-bar-fill { position: absolute; top: 0; bottom: 0; transition: width 0.15s ease-out; }
-  #playerHpFill { left: 0; background: linear-gradient(90deg, var(--accent-player), #2fa393); box-shadow: 0 0 10px var(--accent-player-glow); }
-  #enemyHpFill { right: 0; background: linear-gradient(270deg, var(--accent-enemy), #a83530); box-shadow: 0 0 10px var(--accent-enemy-glow); }
-  .hp-text { position: relative; z-index: 2; font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 1px; color: #ffffff; text-shadow: 0 0 4px #000000; }
-  .effects-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; min-height: 28px; }
-  .hud-player-side .effects-row { justify-content: flex-start; }
-  .hud-enemy-side .effects-row { justify-content: flex-end; }
-  .effect-chip { font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 700; padding: 4px 10px; border: 1px solid; letter-spacing: 1px; background: #00000080; font-variant-numeric: tabular-nums; }
-  .effect-chip.slow { border-color: var(--accent-slow); color: var(--accent-slow); }
-  .effect-chip.knockback { border-color: var(--accent-skill-q); color: var(--accent-skill-q); }
-  .effect-chip.shield { border-color: #38bdf8; color: #38bdf8; text-shadow: 0 0 6px #38bdf8; }
-  #skillbar { bottom: 28px; left: 50%; transform: translateX(-50%); display: flex; gap: 16px; pointer-events: none !important; transition: opacity 0.2s ease; }
-  #topbar, #status, #skillbar, #pauseHint { visibility: hidden; }
-  #hint { display: none; }
-  #pauseHint { top: 20px; left: 50%; transform: translateX(-50%) scale(var(--ui-scale)); position: fixed; padding: 8px 14px; background: rgba(7, 12, 18, 0.82); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 999px; font-family: 'Orbitron', sans-serif; font-size: 12px; letter-spacing: 1px; color: var(--text-dim); text-transform: uppercase; opacity: 0; transition: opacity 0.2s ease, visibility 0.2s ease; z-index: 15; pointer-events: none; }
-  body.show-hud:not(.preview-mode) #pauseHint { visibility: visible; opacity: 1; }
-  body.mobile-ui.show-hud:not(.preview-mode) #pauseHint { pointer-events: auto; cursor: pointer; }
-  .mobile-controls { position: fixed; left: 0; right: 0; bottom: 18px; padding: 0 16px; display: none; justify-content: space-between; align-items: flex-end; pointer-events: none !important; z-index: 12; opacity: 0; transition: opacity 0.2s ease; }
-  .mobile-stick { position: relative; width: 120px; height: 120px; min-width: 120px; min-height: 120px; display: flex; align-items: center; justify-content: center; pointer-events: auto !important; touch-action: none; }
-  .stick-label { position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); font-family: 'Orbitron', sans-serif; font-size: 11px; font-weight: 700; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; pointer-events: none; }
-  .attack-stick { width: 140px; height: 140px; }
-  .stick-base { position: absolute; inset: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(255, 255, 255, 0.12); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04); }
-  .stick-knob { position: absolute; width: 54px; height: 54px; border-radius: 50%; background: rgba(255, 255, 255, 0.14); border: 2px solid rgba(255, 255, 255, 0.2); box-shadow: 0 0 0 8px rgba(255, 255, 255, 0.02); }
-  .skill-sticks-container { position: absolute; bottom: 110%; right: 0; display: flex; gap: 12px; margin-bottom: 10px; pointer-events: none; }
-  .skill-stick { position: relative; width: 70px; height: 70px; border-radius: 50%; background: rgba(255, 255, 255, 0.09); border: 2px solid rgba(255, 255, 255, 0.14); display: grid; place-items: center; font-family: 'Orbitron', sans-serif; font-size: 16px; font-weight: 700; color: var(--text-primary); letter-spacing: 1px; pointer-events: auto !important; touch-action: none; }
-  .skill-stick.q { background: rgba(242, 181, 68, 0.18); border-color: rgba(242, 181, 68, 0.28); }
-  .skill-stick.e { background: rgba(169, 112, 232, 0.18); border-color: rgba(169, 112, 232, 0.28); }
-  .skill-stick .stick-knob { width: 32px; height: 32px; }
-  .skill-stick .stick-label { bottom: -20px; font-size: 10px; }
-  @media (max-width: 920px), (pointer: coarse) {
-    .mobile-controls { display: flex; }
-    body.show-hud:not(.preview-mode) .mobile-controls { opacity: 1; }
-  }
-  body.show-hud #topbar, body.show-hud #hint, body.show-hud #status, body.show-hud #skillbar { visibility: visible; }
-  .skill-slot { width: 90px; height: 90px; flex-shrink: 0; background: var(--panel-bg); border: 2px solid var(--panel-border); display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden; }
-  .skill-slot .cooldown-text { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 11px; color: var(--text-dim); letter-spacing: 0.5px; font-variant-numeric: tabular-nums; }
-  .skill-slot .key { font-family: 'Orbitron', sans-serif; font-size: 18px; font-weight: 700; color: var(--text-primary); line-height: 1; }
-  .skill-slot .label { color: var(--text-dim); font-size: 12px; letter-spacing: 1px; margin-top: 6px; font-weight: 600; text-align: center; }
-  .cooldown-overlay { position: absolute; left: 0; bottom: 0; right: 0; background: rgba(0, 0, 0, 0.75); transition: height 0.05s linear; }
-  #slotQ { border-color: var(--class-accent, var(--accent-skill-q)); }
-  #slotE { border-color: var(--class-accent, var(--accent-skill-e)); }
-  #slotBasic { border-color: var(--class-accent, var(--accent-player)); }
-  .skill-slot.charging { box-shadow: 0 0 14px var(--class-accent, var(--accent-skill-e)); }
-  body:not(.show-hud) #topbar, body:not(.show-hud) #hint, body:not(.show-hud) #status, body:not(.show-hud) #skillbar { visibility: hidden; }
-  #topbar { transform: scale(var(--ui-scale)); transform-origin: top left; }
-  #hint, #status, #skillbar { transform: translateX(-50%) scale(var(--ui-scale)); transform-origin: bottom center; }
-  #status { bottom: 140px; left: 50%; transform: translateX(-50%); font-family: 'Orbitron', sans-serif; font-size: 34px; letter-spacing: 6px; font-weight: 700; opacity: 0; transition: opacity 0.3s; }
-  #status.show { opacity: 1; }
-  .overlay-screen { position: fixed; inset: 0; width: 100%; height: 100%; min-width: 100vw; min-height: 100vh; background: radial-gradient(circle at 50% 40%, rgba(20, 28, 38, 0.94) 0%, rgba(10, 14, 20, 0.97) 70%); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; touch-action: manipulation; }
-  #screenSettings { overflow-y: auto; padding: 40px 20px; justify-content: flex-start; }
-  #screenSettings > * { margin-bottom: 20px; }
-  #screenMain { position: relative; width: 100%; height: 100%; overflow: hidden; }
-  #screenMain::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 30% 25%, rgba(79,214,196,0.12), transparent 22%), radial-gradient(circle at 70% 30%, rgba(224,85,79,0.1), transparent 20%), radial-gradient(circle at 50% 70%, rgba(122,171,236,0.1), transparent 18%); pointer-events: none; }
-  #screenMain .btn-column { position: relative; z-index: 1; }
-  .overlay-screen.hidden { display: none; }
-  .lobby-title { font-family: 'Orbitron', sans-serif; font-size: 60px; font-weight: 800; letter-spacing: 8px; color: var(--text-primary); text-shadow: 0 0 32px var(--accent-player-glow); margin-bottom: 8px; text-align: center; }
-  .lobby-sub { font-size: 16px; letter-spacing: 4px; color: var(--text-dim); margin-bottom: 28px; text-transform: uppercase; font-weight: 600; text-align: center; }
-  .lobby-result { font-family: 'Orbitron', sans-serif; font-size: 20px; letter-spacing: 2px; margin-bottom: 34px; min-height: 26px; text-align: center; }
-  .lobby-result.win { color: var(--accent-player); }
-  .lobby-result.lose { color: var(--accent-enemy); }
-  .class-select-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 30px; width: 920px; max-width: 95vw; }
-  .class-card { pointer-events: all; background: var(--panel-bg); border: 2px solid var(--panel-border); padding: 20px 16px; text-align: center; cursor: pointer; transition: all 0.2s ease; display: flex; flex-direction: column; align-items: center; position: relative; justify-content: space-between; }
-  .class-card:hover { border-color: var(--text-primary); transform: translateY(-3px); }
-  .class-card.active { border-color: var(--accent-player); box-shadow: 0 0 18px var(--accent-player-glow); }
-  .class-icon { font-size: 28px; margin-bottom: 8px; }
-  .class-name { font-family: 'Orbitron', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 6px; color: var(--accent-player); }
-  .class-desc { font-size: 13px; color: var(--text-dim); line-height: 1.4; margin-bottom: 12px; }
-  .skill-detail-btn { pointer-events: all; background: transparent; border: 1px solid var(--panel-border); color: var(--accent-player); font-family: 'Orbitron', sans-serif; font-size: 11px; font-weight: 700; padding: 6px 10px; cursor: pointer; transition: all 0.15s; border-radius: 2px; }
-  .skill-detail-btn:hover { background: var(--accent-player); color: #0a0e14; }
-  .modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); display: flex; align-items: center; justify-content: center; z-index: 150; }
-  .modal-overlay.hidden { display: none; }
-  .modal-content { background: var(--panel-bg); border: 2px solid var(--accent-player); padding: 28px; width: 440px; max-width: 90vw; box-shadow: 0 0 30px rgba(0,0,0,0.8); }
-  .ui-preview-modal, #uiPreviewModal:not(.hidden) { position: fixed; inset: 0; background: transparent; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 160; }
-  #uiPreviewModal.hidden { display: none; }
-  #uiPreviewModal .modal-content { background: transparent; border: none; box-shadow: none; padding: 0; width: 100%; max-width: 100%; display: flex; justify-content: center; align-items: center; pointer-events: none; }
-  #uiPreviewModal .preview-exit-btn { display: none; pointer-events: all; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 170; width: 160px; max-width: 90vw; }
-  body.preview-mode #uiPreviewModal .preview-exit-btn { display: inline-flex; }
-  .modal-title { font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 700; color: var(--accent-player); margin-bottom: 16px; text-transform: uppercase; }
-  .modal-skill-item { margin-bottom: 14px; text-align: left; border-bottom: 1px solid var(--panel-border); padding-bottom: 10px; }
-  .modal-skill-item:last-child { border-bottom: none; }
-  .modal-skill-name { font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 4px; }
-  .modal-skill-desc { font-size: 13px; color: var(--text-dim); line-height: 1.4; }
-  .difficulty-select { display: flex; gap: 12px; margin-bottom: 32px; }
-  .diff-btn { pointer-events: all; background: transparent; border: 2px solid var(--panel-border); color: var(--text-dim); width: 110px; padding: 12px 0; text-align: center; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 16px; letter-spacing: 2px; cursor: pointer; transition: all 0.15s; }
-  .diff-btn:hover { border-color: var(--text-primary); color: var(--text-primary); }
-  .diff-btn.easy.active { border-color: var(--diff-easy); color: var(--diff-easy); box-shadow: 0 0 14px #4ade8040; }
-  .diff-btn.normal.active { border-color: var(--diff-normal); color: var(--diff-normal); box-shadow: 0 0 14px #f2c74440; }
-  .diff-btn.hard.active { border-color: var(--diff-hard); color: var(--diff-hard); box-shadow: 0 0 14px #ef444440; }
-  .diff-btn.nightmare.active { border-color: var(--diff-nightmare); color: var(--diff-nightmare); box-shadow: 0 0 20px #b869f050; }
-  .action-btn { pointer-events: all; background: transparent; padding: 16px 48px; font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 17px; letter-spacing: 3px; display: inline-flex; align-items: center; justify-content: center; text-align: center; cursor: pointer; transition: all 0.15s; }
-  .action-btn.primary { border: 2px solid var(--accent-player); color: var(--accent-player); }
-  .action-btn.primary:hover { background: var(--accent-player); color: #0a0e14; box-shadow: 0 0 24px var(--accent-player-glow); }
-  .action-btn.secondary { border: 2px solid var(--panel-border); color: var(--text-dim); padding: 16px 36px; font-size: 15px; }
-  .action-btn.secondary:hover { border-color: var(--text-primary); color: var(--text-primary); }
-  .btn-column { display: flex; flex-direction: column; gap: 14px; width: 320px; align-items: stretch; }
-  .btn-column .action-btn { text-align: center; }
-  .btn-row { display: flex; gap: 16px; }
-  .setting-item { display: flex; align-items: center; justify-content: space-between; width: 320px; background: var(--panel-bg); border: 2px solid var(--panel-border); padding: 16px 20px; margin-bottom: 28px; }
-  .setting-item.setting-range { flex-direction: column; align-items: stretch; }
-  .setting-item.setting-range .slider-title { font-size: 13px; color: var(--text-dim); margin-top: 10px; margin-bottom: 6px; letter-spacing: 1px; text-transform: uppercase; }
-  .setting-item.setting-range input[type="range"] { width: 100%; accent-color: var(--accent-player); }
-  .setting-item.setting-range .range-value { font-size: 13px; color: var(--text-primary); text-align: right; margin-top: 6px; }
-  .setting-toggle-btn { pointer-events: all; background: transparent; border: 2px solid var(--accent-player); color: var(--accent-player); padding: 6px 16px; font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.15s; }
-  .setting-toggle-btn.off { border-color: var(--panel-border); color: var(--text-dim); }
-  #screenMain #langSwitch { position: absolute; top: 20px; right: 24px; display: flex; gap: 6px; z-index: 200; pointer-events: all; }
-  .lang-btn { pointer-events: all; background: transparent; border: 2px solid var(--panel-border); color: var(--text-dim); padding: 6px 14px; font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 1px; cursor: pointer; transition: all 0.15s; }
-  .lang-btn:hover { border-color: var(--text-primary); color: var(--text-primary); }
-  .lang-btn.active { border-color: var(--accent-player); color: var(--accent-player); box-shadow: 0 0 10px var(--accent-player-glow); }
-</style>
-</head>
-<body>
-<div class="overlay-screen" id="screenMain">
-  <div id="langSwitch">
-    <button class="lang-btn" id="langKoBtn" data-lang="ko">한국어</button>
-    <button class="lang-btn" id="langEnBtn" data-lang="en">EN</button>
-  </div>
-  <div class="lobby-title">PROJECT: ARENA</div>
-  <div class="lobby-sub" id="lobbySub">전장에 참여하여 승리하세요</div>
-  <div class="btn-column">
-    <button class="action-btn primary" id="mainStartBtn">전투 시작</button>
-    <button class="action-btn secondary" id="mainClassBtn">클래스 선택</button>
-    <button class="action-btn secondary" id="mainSettingsBtn">설정</button>
-  </div>
-</div>
-<div class="overlay-screen hidden" id="screenClassSelect">
-  <div class="lobby-title" style="font-size:38px;" id="classTitle">CLASS SELECT</div>
-  <div class="lobby-sub" id="classSub">전투에 사용할 클래스를 선택하세요</div>
-  <div class="class-select-grid" id="classSelectGrid">
-    <div class="class-card active" data-class="striker">
-      <div>
-        <div class="class-icon">⚡</div>
-        <div class="class-name" id="cNameStriker">STRIKER</div>
-        <div class="class-desc" id="cDescStriker">균형 잡힌 원거리 투사체 공격과 대시, 파열구 범위 기술을 사용합니다.</div>
-      </div>
-      <button class="skill-detail-btn" data-class-detail="striker">스킬 설명</button>
-    </div>
-    <div class="class-card" data-class="mage">
-      <div>
-        <div class="class-icon">🔮</div>
-        <div class="class-name" id="cNameMage">ARCANE MAGE</div>
-        <div class="class-desc" id="cDescMage">약한 유도 탄환과 점멸, 마우스 위치에 1초 뒤 낙하하는 메테오를 사용합니다.</div>
-      </div>
-      <button class="skill-detail-btn" data-class-detail="mage">스킬 설명</button>
-    </div>
-    <div class="class-card" data-class="assassin">
-      <div>
-        <div class="class-icon">🗡️</div>
-        <div class="class-name" id="cNameAssassin">ASSASSIN</div>
-        <div class="class-desc" id="cDescAssassin">그림자 도약 후, 마우스 방향으로 빠른 암살용 칼날 탄환들을 난사합니다.</div>
-      </div>
-      <button class="skill-detail-btn" data-class-detail="assassin">스킬 설명</button>
-    </div>
-    <div class="class-card" data-class="paladin">
-      <div>
-        <div class="class-icon">🛡️</div>
-        <div class="class-name" id="cNamePaladin">PALADIN</div>
-        <div class="class-desc" id="cDescPaladin">근접 충격파 발사 후 대미지를 2회 막아주는 성스러운 보호막을 획득합니다.</div>
-      </div>
-      <button class="skill-detail-btn" data-class-detail="paladin">스킬 설명</button>
-    </div>
-  </div>
-  <button class="action-btn secondary" id="closeClassBtn">확인</button>
-</div>
-<div class="modal-overlay hidden" id="skillDetailModal">
-  <div class="modal-content" id="modalContent">
-    <div class="modal-title" id="modalClassTitle">CLASS SKILLS</div>
-    <div id="modalSkillList"></div>
-    <button class="action-btn secondary" id="closeModalBtn" style="width:100%; margin-top:10px; padding:10px;">닫기</button>
-  </div>
-</div>
-<div class="overlay-screen hidden" id="screenSettings">
-  <div class="lobby-title" style="font-size:38px;" id="settingsTitle">SETTINGS</div>
-  <div class="lobby-sub" id="settingsSub">게임 설정을 변경할 수 있습니다</div>
-  <div class="setting-item">
-    <span class="setting-label" id="damageTextLabel">대미지 표시</span>
-    <button class="setting-toggle-btn" id="toggleDamageTextBtn">ON</button>
-  </div>
-  <div class="setting-item setting-range">
-    <span class="setting-label" id="soundVolumeLabel">사운드 볼륨</span>
-    <span class="slider-title" id="volumeTitle">볼륨</span>
-    <input type="range" id="sfxVolumeSlider" min="0" max="1" step="0.01" value="0.7">
-    <span class="range-value" id="soundVolumeValue">70%</span>
-  </div>
-  <div class="setting-item setting-range">
-    <span class="setting-label" id="uiScaleLabel">UI 크기</span>
-    <span class="slider-title" id="uiScaleTitle">크기</span>
-    <input type="range" id="uiScaleSlider" min="0.95" max="1.05" step="0.01" value="1">
-    <span class="range-value" id="uiScaleValue">100%</span>
-  </div>
-  <button class="action-btn secondary" id="openUiPreviewBtn">UI 미리보기</button>
-  <button class="action-btn secondary" id="closeSettingsBtn">닫기</button>
-</div>
-<div class="modal-overlay hidden" id="uiPreviewModal">
-  <div class="modal-content ui-preview-modal">
-    <button class="action-btn secondary preview-exit-btn" id="closeUiPreviewBtn">나가기</button>
-  </div>
-</div>
-<div class="overlay-screen hidden" id="screenDifficulty">
-  <div class="lobby-title" style="font-size:38px;" id="diffTitle">난이도 선택</div>
-  <div class="lobby-sub" id="diffSub">상대의 속도 · 공격 빈도 · 스킬 사용을 결정해요</div>
-  <div class="difficulty-select" id="difficultySelect">
-    <button class="diff-btn easy" data-diff="easy">쉬움</button>
-    <button class="diff-btn normal active" data-diff="normal">보통</button>
-    <button class="diff-btn hard" data-diff="hard">어려움</button>
-    <button class="diff-btn nightmare" data-diff="nightmare">악몽</button>
-  </div>
-  <div class="btn-row">
-    <button class="action-btn primary" id="confirmStartBtn">전투 시작</button>
-    <button class="action-btn secondary" id="backToLobbyBtn">뒤로가기</button>
-  </div>
-</div>
-<div class="overlay-screen hidden" id="screenPause">
-  <div class="lobby-title" style="font-size:38px;" id="pausedTitle">PAUSED</div>
-  <div class="lobby-sub" id="pausedSub">게임이 일시 정지되었습니다</div>
-  <div class="btn-row">
-    <button class="action-btn primary" id="resumeBtn">게임 계속하기</button>
-    <button class="action-btn secondary" id="pauseToLobbyBtn">로비로 돌아가기</button>
-  </div>
-</div>
-<div class="overlay-screen hidden" id="screenResult">
-  <div class="lobby-title" style="font-size:38px;" id="resultTitle">RESULT</div>
-  <div class="lobby-result" id="resultText"></div>
-  <div class="btn-row">
-    <button class="action-btn primary" id="retryBtn">다시하기</button>
-    <button class="action-btn secondary" id="toLobbyBtn">로비로 돌아가기</button>
-  </div>
-</div>
-<canvas id="arena"></canvas>
-<div class="hud" id="topbar">
-  <div class="hud-player-side">
-    <div class="name-tag" id="playerTag">YOU</div>
-    <div class="hp-bar-wrap">
-      <div class="hp-bar-fill" id="playerHpFill" style="width:100%"></div>
-      <div class="hp-text" id="playerHpText">100 / 100</div>
-    </div>
-    <div class="effects-row" id="playerEffects"></div>
-  </div>
-  <div></div>
-  <div class="hud-enemy-side">
-    <div class="name-tag" id="enemyTag">TARGET BOT</div>
-    <div class="hp-bar-wrap">
-      <div class="hp-bar-fill" id="enemyHpFill" style="width:100%"></div>
-      <div class="hp-text" id="enemyHpText">100 / 100</div>
-    </div>
-  </div>
-</div>
-<div class="hud" id="hint"><span id="hudHint">WASD 이동 · 마우스 조준 · 좌클릭 공격 · Q 이동스킬 · E 특수스킬</span></div>
-<div class="hud" id="pauseHint">일시 정지</div>
-<div class="hud" id="status"></div>
-<div class="hud mobile-controls" id="mobileControls">
-  <div class="mobile-stick" id="moveStick">
-    <div class="stick-base"></div>
-    <div class="stick-knob"></div>
-    <div class="stick-label">이동</div>
-  </div>
-  <div class="mobile-stick attack-stick" id="attackStick">
-    <div class="stick-base"></div>
-    <div class="stick-knob"></div>
-    <div class="stick-label">평타</div>
-    <div class="skill-sticks-container">
-      <div class="skill-stick q" id="skillQStick">
-        <div class="stick-base"></div>
-        <div class="stick-knob"></div>
-        <div class="stick-label">Q</div>
-      </div>
-      <div class="skill-stick e" id="skillEStick">
-        <div class="stick-base"></div>
-        <div class="stick-knob"></div>
-        <div class="stick-label">E</div>
-      </div>
-    </div>
-  </div>
-</div>
-<div class="hud" id="skillbar">
-  <div class="skill-slot" id="slotBasic">
-    <div class="key">LMB</div>
-    <div class="label" id="labelBasic">공격</div>
-    <div class="cooldown-overlay" id="cdBasic" style="height:0%"></div>
-    <div class="cooldown-text" id="cdTextBasic"></div>
-  </div>
-  <div class="skill-slot" id="slotQ">
-    <div class="key">Q</div>
-    <div class="label" id="labelQ">스킬</div>
-    <div class="cooldown-overlay" id="cdQ" style="height:0%"></div>
-    <div class="cooldown-text" id="cdTextQ"></div>
-  </div>
-  <div class="skill-slot" id="slotE">
-    <div class="key">E</div>
-    <div class="label" id="labelE">특수스킬</div>
-    <div class="cooldown-overlay" id="cdE" style="height:0%"></div>
-    <div class="cooldown-text" id="cdTextE"></div>
-  </div>
-</div>
-<script>
-const canvas = document.getElementById('arena');
-const ctx = canvas.getContext('2d');
-function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-resize();
-window.addEventListener('resize', resize);
+  <meta charset="UTF-8">
+  <title>PROJECT: ARENA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&family=Rajdhani:wght@500;600;700&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg-void: #0a0e14;
+      --bg-arena: #12181f;
+      --grid-line: #2a3442;
+      /* ← brighter grid */
+      --accent-player: #4fd6c4;
+      --accent-player-glow: #4fd6c480;
+      --accent-enemy: #e0554f;
+      --accent-enemy-glow: #e0554f80;
+      --accent-skill-q: #f2b544;
+      --accent-skill-e: #a970e8;
+      --accent-slow: #5aa9e6;
+      --diff-easy: #4ade80;
+      --diff-normal: #f2c744;
+      --diff-hard: #ef4444;
+      --diff-nightmare: #b869f0;
+      --text-primary: #e8edf2;
+      --text-dim: #5c6a7a;
+      --panel-bg: #0e131aee;
+      --panel-border: #232e3a;
+      --ui-scale: 1;
+    }
 
-const keys = {};
-const mouse = { x: 0, y: 0, down: false };
-let mobileInput = { moveX: 0, moveY: 0, attackDirX: 0, attackDirY: 0, attackActive: false, qDirX: 0, qDirY: 0, qActive: false, eDirX: 0, eDirY: 0, eActive: false };
-let isMobile = false;
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-// 🔧 모바일 감지를 가장 먼저 실행
-if ('ontouchstart' in window || navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches) {
-  isMobile = true;
-  document.body.classList.add('mobile-ui');
-}
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      background: var(--bg-void);
+      overflow: hidden;
+      font-family: 'Rajdhani', sans-serif;
+      color: var(--text-primary);
+      touch-action: manipulation;
+    }
 
-window.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    if (gameState === 'playing') pauseGame();
-    else if (gameState === 'paused') resumeGame();
-    return;
-  }
-  const k = e.key.toLowerCase();
-  if (!keys[k] && k === 'e') startCharging();
-  keys[k] = true;
-});
-window.addEventListener('keyup', e => {
-  const k = e.key.toLowerCase();
-  keys[k] = false;
-  if (k === 'e') releaseCharge();
-});
-canvas.addEventListener('mousemove', e => { if (!isMobile) { mouse.x = e.clientX; mouse.y = e.clientY; } });
-canvas.addEventListener('mousedown', e => { if (!isMobile && e.button === 0) mouse.down = true; });
-canvas.addEventListener('mouseup', e => { if (!isMobile && e.button === 0) mouse.down = false; });
+    button,
+    .action-btn,
+    .lang-btn,
+    .diff-btn,
+    .skill-detail-btn {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
 
-const moveStick = document.getElementById('moveStick');
-const attackStick = document.getElementById('attackStick');
-const skillQStick = document.getElementById('skillQStick');
-const skillEStick = document.getElementById('skillEStick');
-const pauseHint = document.getElementById('pauseHint');
+    #arena {
+      position: fixed;
+      inset: 0;
+      display: block;
+      background: var(--bg-arena);
+      cursor: crosshair;
+      z-index: 0;
+    }
 
-let activeStickPointers = { move: null, attack: null, q: null, e: null };
+    .hud {
+      position: fixed;
+      pointer-events: none;
+      user-select: none;
+      z-index: 10;
+    }
 
-function getStickElement(stickType) {
-  if (stickType === 'move') return moveStick;
-  if (stickType === 'attack') return attackStick;
-  if (stickType === 'q') return skillQStick;
-  if (stickType === 'e') return skillEStick;
-  return null;
-}
+    #topbar {
+      top: calc(20px / var(--ui-scale));
+      left: calc(24px / var(--ui-scale));
+      width: calc((100% - 48px) / var(--ui-scale));
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      align-items: start;
+    }
 
-function updateStickPosition(stick, clientX, clientY) {
-  const rect = stick.getBoundingClientRect();
-  const cx = rect.left + rect.width / 2;
-  const cy = rect.top + rect.height / 2;
-  const dx = clientX - cx;
-  const dy = clientY - cy;
-  const maxDist = rect.width * 0.35;
-  const len = Math.hypot(dx, dy);
-  const clamped = len > maxDist ? maxDist / len : 1;
-  const nx = dx * clamped;
-  const ny = dy * clamped;
-  const knob = stick.querySelector(':scope > .stick-knob');
-  if (knob) knob.style.transform = `translate(${nx}px, ${ny}px)`;
-  return { x: nx / maxDist, y: ny / maxDist };
-}
+    .hud-player-side {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      min-width: 0;
+      justify-self: start;
+      max-width: min(45vw, 320px);
+    }
 
-function resetStick(stick) {
-  const knob = stick.querySelector(':scope > .stick-knob');
-  if (knob) knob.style.transform = 'translate(0, 0)';
-}
+    .hud-enemy-side {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      min-width: 0;
+      justify-self: end;
+      max-width: min(45vw, 320px);
+    }
 
-function resetStickInput(stickType) {
-  if (stickType === 'move') { mobileInput.moveX = 0; mobileInput.moveY = 0; }
-  else if (stickType === 'attack') { mobileInput.attackActive = false; mobileInput.attackDirX = 0; mobileInput.attackDirY = 0; }
-  else if (stickType === 'q') { mobileInput.qActive = false; mobileInput.qDirX = 0; mobileInput.qDirY = 0; }
-  else if (stickType === 'e') { mobileInput.eActive = false; mobileInput.eDirX = 0; mobileInput.eDirY = 0; }
-}
+    .name-tag {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 15px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
 
-function handleStickDown(e, stickType) {
-  const stick = getStickElement(stickType);
-  if (!stick) return;
-  const pointerId = e.pointerId;
-  if (activeStickPointers[stickType] !== null) return;
-  activeStickPointers[stickType] = pointerId;
-  if (stick.setPointerCapture) {
-    try { stick.setPointerCapture(pointerId); } catch(err) {}
-  }
-  const pos = updateStickPosition(stick, e.clientX, e.clientY);
-  if (stickType === 'move') { mobileInput.moveX = pos.x; mobileInput.moveY = pos.y; }
-  else if (stickType === 'attack') { mobileInput.attackDirX = pos.x; mobileInput.attackDirY = pos.y; mobileInput.attackActive = true; }
-  else if (stickType === 'q') { mobileInput.qDirX = pos.x; mobileInput.qDirY = pos.y; mobileInput.qActive = true; }
-  else if (stickType === 'e') { mobileInput.eDirX = pos.x; mobileInput.eDirY = pos.y; mobileInput.eActive = true; startCharging(); }
-}
+    .hp-bar-wrap {
+      width: clamp(220px, 24vw, 320px);
+      min-width: 180px;
+      max-width: 320px;
+      height: 24px;
+      background: #00000080;
+      border: 2px solid var(--panel-border);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-function handleStickMove(e, stickType) {
-  const pointerId = e.pointerId;
-  if (activeStickPointers[stickType] !== pointerId) return;
-  const stick = getStickElement(stickType);
-  if (!stick) return;
-  const pos = updateStickPosition(stick, e.clientX, e.clientY);
-  if (stickType === 'move') { mobileInput.moveX = pos.x; mobileInput.moveY = pos.y; }
-  else if (stickType === 'attack') { mobileInput.attackDirX = pos.x; mobileInput.attackDirY = pos.y; }
-  else if (stickType === 'q') { mobileInput.qDirX = pos.x; mobileInput.qDirY = pos.y; }
-  else if (stickType === 'e') { mobileInput.eDirX = pos.x; mobileInput.eDirY = pos.y; }
-}
+    .hp-bar-fill {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      transition: width 0.15s ease-out;
+    }
 
-function handleStickUp(e, stickType) {
-  const pointerId = e.pointerId;
-  const stick = getStickElement(stickType);
-  if (activeStickPointers[stickType] !== pointerId) return;
-  if (stick && stick.releasePointerCapture) {
-    try { stick.releasePointerCapture(pointerId); } catch(err) {}
-  }
-  activeStickPointers[stickType] = null;
-  if (stickType === 'q') {
-    if (gameState === 'playing' && cooldowns.q.cur <= 0 && mobileInput.qActive) {
-      const dirLen = Math.hypot(mobileInput.qDirX, mobileInput.qDirY);
-      if (dirLen > 0.3) {
-        useQSkill(player, player.x + mobileInput.qDirX * 500, player.y + mobileInput.qDirY * 500, 'player');
-        cooldowns.q.cur = cooldowns.q.max;
+    #playerHpFill {
+      left: 0;
+      background: linear-gradient(90deg, var(--accent-player), #2fa393);
+      box-shadow: 0 0 10px var(--accent-player-glow);
+    }
+
+    #enemyHpFill {
+      right: 0;
+      background: linear-gradient(270deg, var(--accent-enemy), #a83530);
+      box-shadow: 0 0 10px var(--accent-enemy-glow);
+    }
+
+    .hp-text {
+      position: relative;
+      z-index: 2;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #ffffff;
+      text-shadow: 0 0 4px #000000;
+    }
+
+    .effects-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+      min-height: 28px;
+    }
+
+    .hud-player-side .effects-row {
+      justify-content: flex-start;
+    }
+
+    .hud-enemy-side .effects-row {
+      justify-content: flex-end;
+    }
+
+    .effect-chip {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border: 1px solid;
+      letter-spacing: 1px;
+      background: #00000080;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .effect-chip.slow {
+      border-color: var(--accent-slow);
+      color: var(--accent-slow);
+    }
+
+    .effect-chip.knockback {
+      border-color: var(--accent-skill-q);
+      color: var(--accent-skill-q);
+    }
+
+    .effect-chip.shield {
+      border-color: #38bdf8;
+      color: #38bdf8;
+      text-shadow: 0 0 6px #38bdf8;
+    }
+
+    #skillbar {
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 16px;
+      pointer-events: none !important;
+      transition: opacity 0.2s ease;
+    }
+
+    #topbar,
+    #status,
+    #skillbar,
+    #pauseHint {
+      visibility: hidden;
+    }
+
+    #hint {
+      display: none;
+    }
+
+    #pauseHint {
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) scale(var(--ui-scale));
+      position: fixed;
+      padding: 8px 14px;
+      background: rgba(7, 12, 18, 0.82);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 12px;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      opacity: 0;
+      transition: opacity 0.2s ease, visibility 0.2s ease;
+      z-index: 15;
+      pointer-events: none;
+    }
+
+    body.show-hud:not(.preview-mode) #pauseHint {
+      visibility: visible;
+      opacity: 1;
+      pointer-events: auto;
+      cursor: pointer;
+    }
+
+    .mobile-controls {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 14px;
+      padding: 0 14px;
+      display: none;
+      justify-content: space-between;
+      align-items: flex-end;
+      pointer-events: none !important;
+      z-index: 12;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .mobile-stick {
+      position: relative;
+      width: clamp(96px, 26vw, 124px);
+      height: clamp(96px, 26vw, 124px);
+      min-width: 96px;
+      min-height: 96px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto !important;
+      touch-action: none;
+    }
+
+    .stick-label {
+      position: absolute;
+      bottom: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    .attack-stick {
+      width: clamp(108px, 29vw, 136px);
+      height: clamp(108px, 29vw, 136px);
+    }
+
+    .stick-base {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      border: 2px solid rgba(255, 255, 255, 0.12);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    }
+
+    .stick-knob {
+      position: absolute;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.14);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.02);
+    }
+
+    .skill-sticks-container {
+      position: absolute;
+      bottom: 110%;
+      right: 0;
+      display: flex;
+      gap: 12px;
+      margin-bottom: 10px;
+      pointer-events: none;
+    }
+
+    .skill-stick {
+      position: relative;
+      width: clamp(68px, 18vw, 84px);
+      height: clamp(68px, 18vw, 84px);
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.09);
+      border: 2px solid rgba(255, 255, 255, 0.14);
+      display: grid;
+      place-items: center;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: 1px;
+      pointer-events: auto !important;
+      touch-action: none;
+    }
+
+    .skill-stick.q {
+      background: rgba(242, 181, 68, 0.18);
+      border-color: rgba(242, 181, 68, 0.28);
+    }
+
+    .skill-stick.e {
+      background: rgba(169, 112, 232, 0.18);
+      border-color: rgba(169, 112, 232, 0.28);
+    }
+
+    .skill-stick .stick-knob {
+      width: 30px;
+      height: 30px;
+    }
+
+    .skill-stick .stick-label {
+      bottom: -16px;
+      font-size: 8px;
+    }
+
+    @media (max-width: 920px),
+    (pointer: coarse) {
+      .mobile-controls {
+        display: flex;
+      }
+
+      body.show-hud:not(.preview-mode) .mobile-controls {
+        opacity: 1;
       }
     }
-  } else if (stickType === 'e') {
-    releaseCharge();
-  }
-  resetStickInput(stickType);
-  if (stick) resetStick(stick);
-}
 
-// 🔧 pointer 이벤트만 사용 (터치도 pointer로 통합)
-function attachStickEvents(stickEl, stickType) {
-  stickEl.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    handleStickDown(e, stickType);
-  });
-  stickEl.addEventListener('pointermove', (e) => {
-    e.preventDefault();
-    handleStickMove(e, stickType);
-  });
-  stickEl.addEventListener('pointerup', (e) => {
-    handleStickUp(e, stickType);
-  });
-  stickEl.addEventListener('pointercancel', (e) => {
-    handleStickUp(e, stickType);
-  });
-  stickEl.addEventListener('lostpointercapture', (e) => {
-    handleStickUp(e, stickType);
-  });
-}
+    body.show-hud #topbar,
+    body.show-hud #hint,
+    body.show-hud #status,
+    body.show-hud #skillbar {
+      visibility: visible;
+    }
 
-attachStickEvents(moveStick, 'move');
-attachStickEvents(attackStick, 'attack');
-attachStickEvents(skillQStick, 'q');
-attachStickEvents(skillEStick, 'e');
+    .skill-slot {
+      width: 90px;
+      height: 90px;
+      flex-shrink: 0;
+      background: var(--panel-bg);
+      border: 2px solid var(--panel-border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
 
-// 🔧 일시정지 버튼 - 모바일/PC 모두 처리
-function handlePauseClick(e) {
-  e.stopPropagation();
-  if (gameState === 'playing') {
-    unlockAudio();
-    playSfx('buttonClick');
-    pauseGame();
-  }
-}
-pauseHint.addEventListener('click', handlePauseClick);
-pauseHint.addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  handlePauseClick(e);
-}, { passive: false });
+    .skill-slot .cooldown-text {
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 0.5px;
+      font-variant-numeric: tabular-nums;
+    }
 
-const CLASSES = {
-  striker: { name: 'STRIKER', color: '#4fd6c4', glow: '#4fd6c480', maxHp: 100, moveSpeed: 260, basicDmg: 11, basicSpeed: 620, basicCd: 0.35, basicHoming: 0, qCd: 3.5, eCd: 6.0, skills: { ko: { basic: '파동탄', q: '대시', e: '파열구' }, en: { basic: 'Pulse Shot', q: 'Dash', e: 'Burst' } }, details: { ko: { basic: "파동탄: 직진하는 높은 속도의 투사체를 발사합니다. (데미지: 11)", q: "대시: 지정한 방향으로 빠르게 돌진합니다. (쿨타임: 3.5초)", e: "파열구: 주변 넓은 범위에 강력한 폭발을 일으킵니다. (데미지: 24, 쿨타임: 6초)" }, en: { basic: "Pulse Shot: Fires a fast linear projectile. (Damage: 11)", q: "Dash: Rapidly dashes toward the target direction. (Cooldown: 3.5s)", e: "Burst: Causes a large explosion around yourself. (Damage: 24, Cooldown: 6s)" } } },
-  mage: { name: 'ARCANE MAGE', color: '#a970e8', glow: '#a970e880', maxHp: 85, moveSpeed: 240, basicDmg: 7.5, basicSpeed: 450, basicCd: 0.45, basicHoming: 0.3, qCd: 5.0, eCd: 8.0, skills: { ko: { basic: '유도 마탄', q: '점멸', e: '메테오' }, en: { basic: 'Arcane Bolt', q: 'Blink', e: 'Meteor' } }, details: { ko: { basic: "유도 마탄: 적을 향해 미세하게 유도되는 마탄을 발사합니다. (데미지: 7.5)", q: "점멸: 지정 위치로 순간 이동합니다. (쿨타임: 5초)", e: "메테오: 목표 위치에 1초 후 작고 강력한 운석을 떨어뜨립니다. (범위: 120, 데미지: 28, 쿨타임: 8초)" }, en: { basic: "Arcane Bolt: Fires a light homing bolt targeting the enemy. (Damage: 7.5)", q: "Blink: Teleports instantaneously toward target location. (Cooldown: 5s)", e: "Meteor: Calls down a compact meteor strike after 1s. (Radius: 120, Damage: 28, Cooldown: 8s)" } } },
-  assassin: { name: 'ASSASSIN', color: '#f2c744', glow: '#f2c74480', maxHp: 80, moveSpeed: 310, basicDmg: 8.5, basicSpeed: 820, basicCd: 0.25, basicHoming: 0, qCd: 2.8, eCd: 5.5, skills: { ko: { basic: '암습', q: '그림자 도약', e: '칼날 연무' }, en: { basic: 'Shadow Strike', q: 'Shadow Leap', e: 'Blade Volley' } }, details: { ko: { basic: "암습: 매우 빠른 속도의 암살용 칼날을 발사합니다. (데미지: 8.5)", q: "그림자 도약: 적의 공격을 피해 순식간에 도약합니다. (쿨타임: 2.8초)", e: "칼날 연무: 목표 방향으로 빠른 칼날 9개를 연속 난사합니다. (발당 데미지: 5, 쿨타임: 5.5초)" }, en: { basic: "Shadow Strike: Fires a high-speed blade projectile. (Damage: 8.5)", q: "Shadow Leap: Instantly leaps away to dodge attacks. (Cooldown: 2.8s)", e: "Blade Volley: Rapidly fires a barrage of 9 blades. (Damage/shot: 5, Cooldown: 5.5s)" } } },
-  paladin: { name: 'PALADIN', color: '#4ade80', glow: '#4ade8080', maxHp: 150, moveSpeed: 210, basicDmg: 11, basicSpeed: 500, basicCd: 0.55, basicHoming: 0, qCd: 4.0, eCd: 7.0, skills: { ko: { basic: '강격', q: '방패 돌진', e: '성스러운 충격' }, en: { basic: 'Slam', q: 'Shield Charge', e: 'Holy Nova' } }, details: { ko: { basic: "강격: 묵직한 충격 투사체를 발사합니다. (데미지: 11)", q: "방패 돌진: 전방으로 돌진합니다. (쿨타임: 4초)", e: "성스러운 충격: 주변에 강한 둔화/밀쳐내기 파동을 일으키고 대미지를 2회 무효화하는 보호막을 획득합니다. (데미지: 26, 쿨타임: 7초)" }, en: { basic: "Slam: Fires a heavy impact projectile. (Damage: 11)", q: "Shield Charge: Charges forward rapidly. (Cooldown: 4s)", e: "Holy Nova: Emits a knockback wave and gains a 2-stack invincibility shield. (Damage: 26, Cooldown: 7s)" } } }
-};
+    .skill-slot .key {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1;
+    }
 
-let selectedClassKey = 'striker';
-function makeEntity(x, y, color, glow, radius) {
-  return { x, y, radius, color, glow, hp: 100, maxHp: 100, alive: true, classKey: 'striker', angle: 0, dashUntil: 0, dashVx: 0, dashVy: 0, hitFlash: 0, slowUntil: 0, slowFactor: 1, knockbackVx: 0, knockbackVy: 0, knockbackDisplayUntil: 0, shieldStacks: 0, eCharging: false, eChargeStart: 0, qCd: 0, eCd: 0, rapidShotsLeft: 0, rapidShotTimer: 0, moveDirTimer: 0, moveDirAngle: 0, openingTimer: 0, openingDirY: 0, openingDashLockTimer: 0 };
-}
-const player = makeEntity(300, 400, '#4fd6c4', '#4fd6c480', 16);
-const bot = makeEntity(900, 400, '#e0554f', '#e0554f80', 16);
-const projectiles = [], auras = [], delayedMeteors = [], floatingTexts = [], particles = [];
-const cooldowns = { basic: { cur: 0, max: 0.35 }, q: { cur: 0, max: 3.5 }, e: { cur: 0, max: 6 } };
-let showDamageText = true;
-let sfxVolume = parseFloat(localStorage.getItem('pvpProtoSfxVol')) || 0.7;
-let uiScale = parseFloat(localStorage.getItem('pvpProtoUiScale')) || 1.0;
-let startLabelTimer = 0, startLabelText = 'Me', roundEnding = false, lastHoverSfxTime = 0;
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-function playHoverSfx() { const now = performance.now(); if (now - lastHoverSfxTime < 100) return; lastHoverSfxTime = now; playSfx('buttonHover'); }
-function playSfx(kind) {
-  if (sfxVolume <= 0) return;
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-  const now = audioCtx.currentTime;
-  const output = audioCtx.createGain();
-  output.gain.setValueAtTime(0.0001, now);
-  const filter = audioCtx.createBiquadFilter();
-  filter.Q.setValueAtTime(1.6, now);
-  const oscA = audioCtx.createOscillator();
-  const oscB = audioCtx.createOscillator();
-  let hasOscB = false, duration = 0.12, envelopePeak = Math.max(0.001, sfxVolume), filterFreq = 1200, filterType = 'lowpass', typeA = 'sine', typeB = 'triangle', noise = false, noiseGainLevel = 0;
-  switch (kind) {
-    case 'shoot': typeA = 'square'; typeB = 'triangle'; oscA.frequency.setValueAtTime(780, now); oscB.frequency.setValueAtTime(1140, now); hasOscB = true; duration = 0.14; filterFreq = 2800; filterType = 'highpass'; noise = true; noiseGainLevel = 0.14; break;
-    case 'enemyShoot': typeA = 'triangle'; typeB = 'sawtooth'; oscA.frequency.setValueAtTime(520, now); oscB.frequency.setValueAtTime(700, now); hasOscB = true; duration = 0.14; filterFreq = 1900; filterType = 'lowpass'; noise = true; noiseGainLevel = 0.08; break;
-    case 'hit': typeA = 'triangle'; typeB = 'sawtooth'; oscA.frequency.setValueAtTime(260, now); oscB.frequency.setValueAtTime(190, now); hasOscB = true; duration = 0.1; filterFreq = 1100; filterType = 'lowpass'; break;
-    case 'block': typeA = 'square'; typeB = 'triangle'; oscA.frequency.setValueAtTime(180, now); oscB.frequency.setValueAtTime(120, now); hasOscB = true; duration = 0.12; filterFreq = 1000; filterType = 'lowpass'; break;
-    case 'burst': typeA = 'triangle'; typeB = 'sine'; oscA.frequency.setValueAtTime(430, now); oscB.frequency.setValueAtTime(330, now); hasOscB = true; duration = 0.22; filterFreq = 1400; filterType = 'bandpass'; noise = true; noiseGainLevel = 0.1; break;
-    case 'dash': typeA = 'square'; typeB = 'triangle'; oscA.frequency.setValueAtTime(640, now); oscB.frequency.setValueAtTime(520, now); hasOscB = true; duration = 0.12; filterFreq = 2200; filterType = 'bandpass'; break;
-    case 'start': typeA = 'triangle'; typeB = 'sine'; oscA.frequency.setValueAtTime(760, now); oscB.frequency.setValueAtTime(1000, now); hasOscB = true; duration = 0.18; filterFreq = 2300; filterType = 'lowpass'; noise = true; noiseGainLevel = 0.1; break;
-    case 'victory': typeA = 'triangle'; typeB = 'sine'; oscA.frequency.setValueAtTime(780, now); oscB.frequency.setValueAtTime(1180, now); hasOscB = true; duration = 0.50; envelopePeak = Math.max(0.001, sfxVolume) * 1.2; filterFreq = 2200; filterType = 'lowpass'; noise = true; noiseGainLevel = 0.18; break;
-    case 'defeat': typeA = 'square'; typeB = 'triangle'; oscA.frequency.setValueAtTime(260, now); oscB.frequency.setValueAtTime(170, now); hasOscB = true; duration = 0.45; envelopePeak = Math.max(0.001, sfxVolume) * 0.95; filterFreq = 900; filterType = 'lowpass'; noise = true; noiseGainLevel = 0.14; break;
-    case 'buttonClick': typeA = 'square'; typeB = 'triangle'; oscA.frequency.setValueAtTime(1450, now); oscB.frequency.setValueAtTime(1680, now); hasOscB = true; duration = 0.07; filterFreq = 3400; filterType = 'highpass'; noise = true; noiseGainLevel = 0.25; break;
-    case 'buttonHover': typeA = 'sine'; typeB = 'triangle'; oscA.frequency.setValueAtTime(1600, now); oscB.frequency.setValueAtTime(1320, now); hasOscB = true; duration = 0.06; filterFreq = 3800; filterType = 'highpass'; noise = true; noiseGainLevel = 0.16; break;
-    default: typeA = 'sine'; oscA.frequency.setValueAtTime(440, now); duration = 0.12; filterFreq = 1500; filterType = 'lowpass';
-  }
-  oscA.type = typeA; oscA.connect(filter);
-  if (hasOscB) { oscB.type = typeB; oscB.connect(filter); }
-  filter.type = filterType; filter.frequency.setValueAtTime(filterFreq, now); filter.connect(output); output.connect(audioCtx.destination);
-  if (noise) {
-    const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * duration, audioCtx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
-    const noiseSource = audioCtx.createBufferSource();
-    noiseSource.buffer = buffer;
-    const ng = audioCtx.createGain();
-    ng.gain.setValueAtTime(noiseGainLevel * sfxVolume, now);
-    noiseSource.connect(ng).connect(output);
-    noiseSource.start(now); noiseSource.stop(now + duration);
-  }
-  output.gain.setValueAtTime(0.0001, now);
-  output.gain.exponentialRampToValueAtTime(envelopePeak, now + 0.006);
-  output.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-  oscA.start(now); if (hasOscB) oscB.start(now);
-  oscA.stop(now + duration); if (hasOscB) oscB.stop(now + duration);
-}
+    .skill-slot .label {
+      color: var(--text-dim);
+      font-size: 12px;
+      letter-spacing: 1px;
+      margin-top: 6px;
+      font-weight: 600;
+      text-align: center;
+    }
 
-const I18N = {
-  ko: { lobbySub: '전장에 참여하여 승리하세요', startBtn: '전투 시작', selectClassBtn: '클래스 선택', settingsBtn: '설정', classTitle: 'CLASS SELECT', classSub: '전투에 사용할 클래스를 선택하세요', confirmBtn: '확인', cNameStriker: '스트라이커', cDescStriker: '균형 잡힌 원거리 투사체 공격과 대시, 파열구 범위 기술을 사용합니다.', cNameMage: '아케인 메이지', cDescMage: '약한 유도 탄환과 점멸, 마우스 위치에 1초 뒤 낙하하는 메테오를 사용합니다.', cNameAssassin: '어쌔신', cDescAssassin: '그림자 도약 후, 마우스 방향으로 빠른 암살용 칼날 탄환들을 난사합니다.', cNamePaladin: '팔라딘', cDescPaladin: '근접 충격파 발사 후 대미지를 2회 막아주는 성스러운 보호막을 획득합니다.', playerTag: '나', enemyTagPrefix: '봇 (', settingsTitle: 'SETTINGS', settingsSub: '게임 설정을 변경할 수 있습니다', damageTextLabel: '대미지 표시', toggleOn: 'ON', toggleOff: 'OFF', closeBtn: '닫기', soundVolumeLabel: '사운드 볼륨', sliderTitle: '볼륨', uiScaleLabel: 'UI 크기', uiScaleTitle: '크기', uiPreviewBtn: 'UI 미리보기', leavePreviewBtn: '나가기', pauseHintText: 'ESC로 일시 정지', pauseBtnText: '일시 정지', skillDetailBtn: '스킬 설명', diffTitle: '난이도 선택', diffSub: '상대의 속도 · 공격 빈도 · 스킬 사용을 결정해요', diffEasy: '쉬움', diffNormal: '보통', diffHard: '어려움', diffNightmare: '악몽', backBtn: '뒤로가기', pausedTitle: 'PAUSED', pausedSub: '게임이 일시 정지되었습니다', resumeBtn: '게임 계속하기', pauseToLobbyBtn: '로비로 돌아가기', retryBtn: '다시하기', toLobbyBtn: '로비로 돌아가기', hudHint: 'WASD 이동 · 마우스 조준 · 좌클릭 공격 · Q 스킬 · E 특수스킬', resultVictoryTitle: 'VICTORY', resultDefeatTitle: 'DEFEAT', resultVictoryText: '승리했습니다', resultDefeatText: '패배했습니다', statusVictory: 'VICTORY', statusDefeat: 'DEFEAT' },
-  en: { lobbySub: 'Enter the arena and claim your victory', startBtn: 'START BATTLE', selectClassBtn: 'SELECT CLASS', settingsBtn: 'SETTINGS', classTitle: 'CLASS SELECT', classSub: 'Select your class before battle', confirmBtn: 'CONFIRM', cNameStriker: 'STRIKER', cDescStriker: 'Balanced ranged pulse shots, directional dash, and radial burst explosion.', cNameMage: 'ARCANE MAGE', cDescMage: 'Light homing bolts, instantaneous blink, and delayed targeted meteor strike.', cNameAssassin: 'ASSASSIN', cDescAssassin: 'High mobility shadow leap and rapid directional blade projectile barrage.', cNamePaladin: 'PALADIN', cDescPaladin: 'Close-range holy burst with a 2-stack invincibility shield after cast.', playerTag: 'YOU', enemyTagPrefix: 'BOT (', settingsTitle: 'SETTINGS', settingsSub: 'Change your game settings', damageTextLabel: 'Damage Numbers', toggleOn: 'ON', toggleOff: 'OFF', closeBtn: 'Close', soundVolumeLabel: 'Sound Volume', sliderTitle: 'VOLUME', uiScaleLabel: 'UI SIZE', uiScaleTitle: 'SIZE', uiPreviewBtn: 'UI PREVIEW', leavePreviewBtn: 'EXIT PREVIEW', pauseHintText: 'Press ESC to pause', pauseBtnText: 'PAUSE', skillDetailBtn: 'SKILL INFO', diffTitle: 'SELECT DIFFICULTY', diffSub: "Determines opponent's speed, attack frequency, and skill behavior", diffEasy: 'EASY', diffNormal: 'NORMAL', diffHard: 'HARD', diffNightmare: 'NIGHTMARE', backBtn: 'Back', pausedTitle: 'PAUSED', pausedSub: 'The game is paused', resumeBtn: 'RESUME', pauseToLobbyBtn: 'RETURN TO LOBBY', retryBtn: 'RETRY', toLobbyBtn: 'RETURN TO LOBBY', hudHint: 'WASD Move · Mouse Aim · LMB Attack · Q Skill · E Special', resultVictoryTitle: 'VICTORY', resultDefeatTitle: 'DEFEAT', resultVictoryText: 'You Won', resultDefeatText: 'You Lost', statusVictory: 'VICTORY', statusDefeat: 'DEFEAT' }
-};
+    .cooldown-overlay {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      right: 0;
+      background: rgba(0, 0, 0, 0.75);
+      transition: height 0.05s linear;
+    }
 
-let currentLang = localStorage.getItem('pvpProtoLang') || 'ko';
-let lastResultKind = null;
+    #slotQ {
+      border-color: var(--class-accent, var(--accent-skill-q));
+    }
 
-function getLocalizedClassName(classKey) {
-  const capitalized = classKey.charAt(0).toUpperCase() + classKey.slice(1);
-  const key = `cName${capitalized}`;
-  return I18N[currentLang][key] || CLASSES[classKey].name;
-}
+    #slotE {
+      border-color: var(--class-accent, var(--accent-skill-e));
+    }
 
-// 🔧 일시정지 텍스트 업데이트 함수
-function updatePauseHintText() {
-  const t = I18N[currentLang];
-  pauseHint.textContent = isMobile ? t.pauseBtnText : t.pauseHintText;
-}
+    #slotBasic {
+      border-color: var(--class-accent, var(--accent-player));
+    }
 
-function applyLanguage(lang) {
-  currentLang = lang;
-  localStorage.setItem('pvpProtoLang', lang);
-  const t = I18N[lang];
-  document.getElementById('lobbySub').textContent = t.lobbySub;
-  document.getElementById('mainStartBtn').textContent = t.startBtn;
-  document.getElementById('mainClassBtn').textContent = t.selectClassBtn;
-  document.getElementById('mainSettingsBtn').textContent = t.settingsBtn;
-  document.getElementById('classTitle').textContent = t.classTitle;
-  document.getElementById('classSub').textContent = t.classSub;
-  document.getElementById('closeClassBtn').textContent = t.confirmBtn;
-  document.getElementById('cNameStriker').textContent = t.cNameStriker;
-  document.getElementById('cDescStriker').textContent = t.cDescStriker;
-  document.getElementById('cNameMage').textContent = t.cNameMage;
-  document.getElementById('cDescMage').textContent = t.cDescMage;
-  document.getElementById('cNameAssassin').textContent = t.cNameAssassin;
-  document.getElementById('cDescAssassin').textContent = t.cDescAssassin;
-  document.getElementById('cNamePaladin').textContent = t.cNamePaladin;
-  document.getElementById('cDescPaladin').textContent = t.cDescPaladin;
-  document.querySelectorAll('.skill-detail-btn').forEach(btn => btn.textContent = t.skillDetailBtn);
-  document.getElementById('settingsTitle').textContent = t.settingsTitle;
-  document.getElementById('settingsSub').textContent = t.settingsSub;
-  document.getElementById('damageTextLabel').textContent = t.damageTextLabel;
-  document.getElementById('soundVolumeLabel').textContent = t.soundVolumeLabel;
-  document.getElementById('volumeTitle').textContent = t.sliderTitle;
-  document.getElementById('uiScaleLabel').textContent = t.uiScaleLabel;
-  document.getElementById('uiScaleTitle').textContent = t.uiScaleTitle;
-  document.getElementById('openUiPreviewBtn').textContent = t.uiPreviewBtn;
-  document.getElementById('closeUiPreviewBtn').textContent = t.leavePreviewBtn;
-  updatePauseHintText(); // 🔧 모바일/PC 구분하여 텍스트 설정
-  toggleDamageTextBtn.textContent = showDamageText ? t.toggleOn : t.toggleOff;
-  document.getElementById('closeSettingsBtn').textContent = t.closeBtn;
-  document.getElementById('diffTitle').textContent = t.diffTitle;
-  document.getElementById('diffSub').textContent = t.diffSub;
-  document.querySelector('.diff-btn.easy').textContent = t.diffEasy;
-  document.querySelector('.diff-btn.normal').textContent = t.diffNormal;
-  document.querySelector('.diff-btn.hard').textContent = t.diffHard;
-  document.querySelector('.diff-btn.nightmare').textContent = t.diffNightmare;
-  document.getElementById('confirmStartBtn').textContent = t.startBtn;
-  document.getElementById('backToLobbyBtn').textContent = t.backBtn;
-  document.getElementById('pausedTitle').textContent = t.pausedTitle;
-  document.getElementById('pausedSub').textContent = t.pausedSub;
-  document.getElementById('resumeBtn').textContent = t.resumeBtn;
-  document.getElementById('pauseToLobbyBtn').textContent = t.pauseToLobbyBtn;
-  document.getElementById('retryBtn').textContent = t.retryBtn;
-  document.getElementById('toLobbyBtn').textContent = t.toLobbyBtn;
-  document.getElementById('hudHint').innerHTML = t.hudHint;
-  document.getElementById('playerTag').textContent = t.playerTag;
-  const enemyLabel = `${t.enemyTagPrefix}${getLocalizedClassName(bot.classKey)})`;
-  document.getElementById('enemyTag').textContent = enemyLabel;
-  const cls = CLASSES[selectedClassKey];
-  document.getElementById('labelBasic').textContent = cls.skills[lang].basic;
-  document.getElementById('labelQ').textContent = cls.skills[lang].q;
-  document.getElementById('labelE').textContent = cls.skills[lang].e;
-  if (lastResultKind === 'win') { resultTitleEl.textContent = t.resultVictoryTitle; resultTextEl.textContent = t.resultVictoryText; }
-  else if (lastResultKind === 'lose') { resultTitleEl.textContent = t.resultDefeatTitle; resultTextEl.textContent = t.resultDefeatText; }
-  document.getElementById('langKoBtn').classList.toggle('active', lang === 'ko');
-  document.getElementById('langEnBtn').classList.toggle('active', lang === 'en');
-  document.documentElement.lang = lang;
-}
+    .skill-slot.charging {
+      box-shadow: 0 0 14px var(--class-accent, var(--accent-skill-e));
+    }
 
-document.getElementById('langKoBtn').addEventListener('click', () => applyLanguage('ko'));
-document.getElementById('langEnBtn').addEventListener('click', () => applyLanguage('en'));
-document.getElementById('langKoBtn').addEventListener('touchstart', (e) => { e.preventDefault(); applyLanguage('ko'); }, { passive: false });
-document.getElementById('langEnBtn').addEventListener('touchstart', (e) => { e.preventDefault(); applyLanguage('en'); }, { passive: false });
+    body:not(.show-hud) #topbar,
+    body:not(.show-hud) #hint,
+    body:not(.show-hud) #status,
+    body:not(.show-hud) #skillbar {
+      visibility: hidden;
+    }
 
-function applyClassAccent() { document.documentElement.style.setProperty('--class-accent', CLASSES[selectedClassKey].color); }
-document.querySelectorAll('.class-card').forEach(card => {
-  card.addEventListener('click', (e) => {
-    if(e.target.classList.contains('skill-detail-btn')) return;
-    document.querySelectorAll('.class-card').forEach(c => c.classList.remove('active'));
-    card.classList.add('active');
-    selectedClassKey = card.dataset.class;
-    applyClassAccent();
-    applyLanguage(currentLang);
-  });
-  card.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    if(e.target.classList.contains('skill-detail-btn')) return;
-    document.querySelectorAll('.class-card').forEach(c => c.classList.remove('active'));
-    card.classList.add('active');
-    selectedClassKey = card.dataset.class;
-    applyClassAccent();
-    applyLanguage(currentLang);
-  }, { passive: false });
-});
+    #topbar {
+      transform: scale(var(--ui-scale));
+      transform-origin: top left;
+    }
 
-document.querySelectorAll('.skill-detail-btn').forEach(btn => {
-  btn.addEventListener('click', (e) => { e.stopPropagation(); openSkillDetailModal(btn.dataset.classDetail); });
-  btn.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); openSkillDetailModal(btn.dataset.classDetail); }, { passive: false });
-});
+    #hint,
+    #status,
+    #skillbar {
+      transform: translateX(-50%) scale(var(--ui-scale));
+      transform-origin: bottom center;
+    }
 
-function openSkillDetailModal(classKey) {
-  const cls = CLASSES[classKey];
-  const lang = currentLang;
-  const modal = document.getElementById('skillDetailModal');
-  const modalContent = document.getElementById('modalContent');
-  const modalTitle = document.getElementById('modalClassTitle');
-  const modalList = document.getElementById('modalSkillList');
-  modalContent.style.borderColor = cls.color;
-  modalTitle.textContent = `${cls.skills[lang].basic} / ${cls.skills[lang].q} / ${cls.skills[lang].e}`;
-  modalTitle.style.color = cls.color;
-  const details = cls.details[lang];
-  modalList.innerHTML = `
+    #status {
+      bottom: 140px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 34px;
+      letter-spacing: 6px;
+      font-weight: 700;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    #status.show {
+      opacity: 1;
+    }
+
+    .overlay-screen {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      min-width: 100vw;
+      min-height: 100vh;
+      background: radial-gradient(circle at 50% 40%, rgba(20, 28, 38, 0.94) 0%, rgba(10, 14, 20, 0.97) 70%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      touch-action: manipulation;
+    }
+
+    #screenSettings {
+      overflow-y: auto;
+      padding: 40px 20px;
+      justify-content: flex-start;
+    }
+
+    #screenSettings>* {
+      margin-bottom: 20px;
+    }
+
+    #screenMain {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    #screenMain::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 30% 25%, rgba(79, 214, 196, 0.12), transparent 22%), radial-gradient(circle at 70% 30%, rgba(224, 85, 79, 0.1), transparent 20%), radial-gradient(circle at 50% 70%, rgba(122, 171, 236, 0.1), transparent 18%);
+      pointer-events: none;
+    }
+
+    #screenMain .btn-column {
+      position: relative;
+      z-index: 1;
+    }
+
+    .overlay-screen.hidden {
+      display: none;
+    }
+
+    .lobby-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 60px;
+      font-weight: 800;
+      letter-spacing: 8px;
+      color: var(--text-primary);
+      text-shadow: 0 0 32px var(--accent-player-glow);
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .lobby-sub {
+      font-size: 16px;
+      letter-spacing: 4px;
+      color: var(--text-dim);
+      margin-bottom: 28px;
+      text-transform: uppercase;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .lobby-result {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 20px;
+      letter-spacing: 2px;
+      margin-bottom: 34px;
+      min-height: 26px;
+      text-align: center;
+    }
+
+    .lobby-result.win {
+      color: var(--accent-player);
+    }
+
+    .lobby-result.lose {
+      color: var(--accent-enemy);
+    }
+
+    .class-select-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 30px;
+      width: 920px;
+      max-width: 95vw;
+    }
+
+    .class-card {
+      pointer-events: all;
+      background: var(--panel-bg);
+      border: 2px solid var(--panel-border);
+      padding: 20px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      justify-content: space-between;
+    }
+
+    .class-card:hover {
+      border-color: var(--text-primary);
+      transform: translateY(-3px);
+    }
+
+    .class-card.active {
+      border-color: var(--accent-player);
+      box-shadow: 0 0 18px var(--accent-player-glow);
+    }
+
+    .class-icon {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+
+    .class-name {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--accent-player);
+    }
+
+    .class-desc {
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.4;
+      margin-bottom: 12px;
+    }
+
+    .skill-detail-btn {
+      pointer-events: all;
+      background: transparent;
+      border: 1px solid var(--panel-border);
+      color: var(--accent-player);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+      border-radius: 2px;
+    }
+
+    .skill-detail-btn:hover {
+      background: var(--accent-player);
+      color: #0a0e14;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 150;
+    }
+
+    .modal-overlay.hidden {
+      display: none;
+    }
+
+    .modal-content {
+      background: var(--panel-bg);
+      border: 2px solid var(--accent-player);
+      padding: 28px;
+      width: 440px;
+      max-width: 90vw;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+    }
+
+    .ui-preview-modal,
+    #uiPreviewModal:not(.hidden) {
+      position: fixed;
+      inset: 0;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 160;
+    }
+
+    #uiPreviewModal.hidden {
+      display: none;
+    }
+
+    #uiPreviewModal .modal-content {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      padding: 0;
+      width: 100%;
+      max-width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    #uiPreviewModal .preview-exit-btn {
+      display: none;
+      pointer-events: all;
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 170;
+      width: 160px;
+      max-width: 90vw;
+    }
+
+    body.preview-mode #uiPreviewModal .preview-exit-btn {
+      display: inline-flex;
+    }
+
+    .modal-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent-player);
+      margin-bottom: 16px;
+      text-transform: uppercase;
+    }
+
+    .modal-skill-item {
+      margin-bottom: 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--panel-border);
+      padding-bottom: 10px;
+    }
+
+    .modal-skill-item:last-child {
+      border-bottom: none;
+    }
+
+    .modal-skill-name {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .modal-skill-desc {
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.4;
+    }
+
+    .difficulty-select {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .diff-btn {
+      pointer-events: all;
+      background: transparent;
+      border: 2px solid var(--panel-border);
+      color: var(--text-dim);
+      width: 110px;
+      padding: 12px 0;
+      text-align: center;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: 2px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .diff-btn:hover {
+      border-color: var(--text-primary);
+      color: var(--text-primary);
+    }
+
+    .diff-btn.easy.active {
+      border-color: var(--diff-easy);
+      color: var(--diff-easy);
+      box-shadow: 0 0 14px #4ade8040;
+    }
+
+    .diff-btn.normal.active {
+      border-color: var(--diff-normal);
+      color: var(--diff-normal);
+      box-shadow: 0 0 14px #f2c74440;
+    }
+
+    .diff-btn.hard.active {
+      border-color: var(--diff-hard);
+      color: var(--diff-hard);
+      box-shadow: 0 0 14px #ef444440;
+    }
+
+    .diff-btn.nightmare.active {
+      border-color: var(--diff-nightmare);
+      color: var(--diff-nightmare);
+      box-shadow: 0 0 20px #b869f050;
+    }
+
+    .action-btn {
+      pointer-events: all;
+      background: transparent;
+      padding: 16px 48px;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      font-size: 17px;
+      letter-spacing: 3px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .action-btn.primary {
+      border: 2px solid var(--accent-player);
+      color: var(--accent-player);
+    }
+
+    .action-btn.primary:hover {
+      background: var(--accent-player);
+      color: #0a0e14;
+      box-shadow: 0 0 24px var(--accent-player-glow);
+    }
+
+    .action-btn.secondary {
+      border: 2px solid var(--panel-border);
+      color: var(--text-dim);
+      padding: 16px 36px;
+      font-size: 15px;
+    }
+
+    .action-btn.secondary:hover {
+      border-color: var(--text-primary);
+      color: var(--text-primary);
+    }
+
+    .btn-column {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      width: 320px;
+      align-items: stretch;
+    }
+
+    .btn-column .action-btn {
+      text-align: center;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 16px;
+    }
+
+    .setting-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 320px;
+      background: var(--panel-bg);
+      border: 2px solid var(--panel-border);
+      padding: 16px 20px;
+      margin-bottom: 28px;
+    }
+
+    .setting-item.setting-range {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .setting-item.setting-range .slider-title {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-top: 10px;
+      margin-bottom: 6px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .setting-item.setting-range input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent-player);
+    }
+
+    .setting-item.setting-range .range-value {
+      font-size: 13px;
+      color: var(--text-primary);
+      text-align: right;
+      margin-top: 6px;
+    }
+
+    .setting-toggle-btn {
+      pointer-events: all;
+      background: transparent;
+      border: 2px solid var(--accent-player);
+      color: var(--accent-player);
+      padding: 6px 16px;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .setting-toggle-btn.off {
+      border-color: var(--panel-border);
+      color: var(--text-dim);
+    }
+
+    #screenMain #langSwitch {
+      position: absolute;
+      top: 20px;
+      right: 24px;
+      display: flex;
+      gap: 6px;
+      z-index: 200;
+      pointer-events: all;
+    }
+
+    .lang-btn {
+      pointer-events: all;
+      background: transparent;
+      border: 2px solid var(--panel-border);
+      color: var(--text-dim);
+      padding: 6px 14px;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .lang-btn:hover {
+      border-color: var(--text-primary);
+      color: var(--text-primary);
+    }
+
+    .lang-btn.active {
+      border-color: var(--accent-player);
+      color: var(--accent-player);
+      box-shadow: 0 0 10px var(--accent-player-glow);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="overlay-screen" id="screenMain">
+    <div id="langSwitch">
+      <button class="lang-btn" id="langKoBtn" data-lang="ko">한국어</button>
+      <button class="lang-btn" id="langEnBtn" data-lang="en">EN</button>
+    </div>
+    <div class="lobby-title">PROJECT: ARENA</div>
+    <div class="lobby-sub" id="lobbySub">전장에 참여하여 승리하세요</div>
+    <div class="btn-column">
+      <button class="action-btn primary" id="mainStartBtn">전투 시작</button>
+      <button class="action-btn secondary" id="mainClassBtn">클래스 선택</button>
+      <button class="action-btn secondary" id="mainSettingsBtn">설정</button>
+    </div>
+  </div>
+  <div class="overlay-screen hidden" id="screenClassSelect">
+    <div class="lobby-title" style="font-size:38px;" id="classTitle">CLASS SELECT</div>
+    <div class="lobby-sub" id="classSub">전투에 사용할 클래스를 선택하세요</div>
+    <div class="class-select-grid" id="classSelectGrid">
+      <div class="class-card active" data-class="striker">
+        <div>
+          <div class="class-icon">⚡</div>
+          <div class="class-name" id="cNameStriker">STRIKER</div>
+          <div class="class-desc" id="cDescStriker">균형 잡힌 원거리 투사체 공격과 대시, 파열구 범위 기술을 사용합니다.</div>
+        </div>
+        <button class="skill-detail-btn" data-class-detail="striker">스킬 설명</button>
+      </div>
+      <div class="class-card" data-class="mage">
+        <div>
+          <div class="class-icon">🔮</div>
+          <div class="class-name" id="cNameMage">ARCANE MAGE</div>
+          <div class="class-desc" id="cDescMage">약한 유도 탄환과 점멸, 마우스 위치에 1초 뒤 낙하하는 메테오를 사용합니다.</div>
+        </div>
+        <button class="skill-detail-btn" data-class-detail="mage">스킬 설명</button>
+      </div>
+      <div class="class-card" data-class="assassin">
+        <div>
+          <div class="class-icon">🗡️</div>
+          <div class="class-name" id="cNameAssassin">ASSASSIN</div>
+          <div class="class-desc" id="cDescAssassin">그림자 도약 후, 마우스 방향으로 빠른 암살용 칼날 탄환들을 난사합니다.</div>
+        </div>
+        <button class="skill-detail-btn" data-class-detail="assassin">스킬 설명</button>
+      </div>
+      <div class="class-card" data-class="paladin">
+        <div>
+          <div class="class-icon">🛡️</div>
+          <div class="class-name" id="cNamePaladin">PALADIN</div>
+          <div class="class-desc" id="cDescPaladin">근접 충격파 발사 후 대미지를 2회 막아주는 성스러운 보호막을 획득합니다.</div>
+        </div>
+        <button class="skill-detail-btn" data-class-detail="paladin">스킬 설명</button>
+      </div>
+    </div>
+    <button class="action-btn secondary" id="closeClassBtn">확인</button>
+  </div>
+  <div class="modal-overlay hidden" id="skillDetailModal">
+    <div class="modal-content" id="modalContent">
+      <div class="modal-title" id="modalClassTitle">CLASS SKILLS</div>
+      <div id="modalSkillList"></div>
+      <button class="action-btn secondary" id="closeModalBtn"
+        style="width:100%; margin-top:10px; padding:10px;">닫기</button>
+    </div>
+  </div>
+  <div class="overlay-screen hidden" id="screenSettings">
+    <div class="lobby-title" style="font-size:38px;" id="settingsTitle">SETTINGS</div>
+    <div class="lobby-sub" id="settingsSub">게임 설정을 변경할 수 있습니다</div>
+    <div class="setting-item">
+      <span class="setting-label" id="damageTextLabel">대미지 표시</span>
+      <button class="setting-toggle-btn" id="toggleDamageTextBtn">ON</button>
+    </div>
+    <div class="setting-item setting-range">
+      <span class="setting-label" id="soundVolumeLabel">사운드 볼륨</span>
+      <span class="slider-title" id="volumeTitle">볼륨</span>
+      <input type="range" id="sfxVolumeSlider" min="0" max="1" step="0.01" value="0.7">
+      <span class="range-value" id="soundVolumeValue">70%</span>
+    </div>
+    <div class="setting-item setting-range">
+      <span class="setting-label" id="uiScaleLabel">UI 크기</span>
+      <span class="slider-title" id="uiScaleTitle">크기</span>
+      <input type="range" id="uiScaleSlider" min="0.95" max="1.05" step="0.01" value="1">
+      <span class="range-value" id="uiScaleValue">100%</span>
+    </div>
+    <button class="action-btn secondary" id="openUiPreviewBtn">UI 미리보기</button>
+    <button class="action-btn secondary" id="closeSettingsBtn">닫기</button>
+  </div>
+  <div class="modal-overlay hidden" id="uiPreviewModal">
+    <div class="modal-content ui-preview-modal">
+      <button class="action-btn secondary preview-exit-btn" id="closeUiPreviewBtn">나가기</button>
+    </div>
+  </div>
+  <div class="overlay-screen hidden" id="screenDifficulty">
+    <div class="lobby-title" style="font-size:38px;" id="diffTitle">난이도 선택</div>
+    <div class="lobby-sub" id="diffSub">상대의 속도 · 공격 빈도 · 스킬 사용을 결정해요</div>
+    <div class="difficulty-select" id="difficultySelect">
+      <button class="diff-btn easy" data-diff="easy">쉬움</button>
+      <button class="diff-btn normal active" data-diff="normal">보통</button>
+      <button class="diff-btn hard" data-diff="hard">어려움</button>
+      <button class="diff-btn nightmare" data-diff="nightmare">악몽</button>
+    </div>
+    <div class="btn-row">
+      <button class="action-btn primary" id="confirmStartBtn">전투 시작</button>
+      <button class="action-btn secondary" id="backToLobbyBtn">뒤로가기</button>
+    </div>
+  </div>
+  <div class="overlay-screen hidden" id="screenPause">
+    <div class="lobby-title" style="font-size:38px;" id="pausedTitle">PAUSED</div>
+    <div class="lobby-sub" id="pausedSub">게임이 일시 정지되었습니다</div>
+    <div class="btn-row">
+      <button class="action-btn primary" id="resumeBtn">게임 계속하기</button>
+      <button class="action-btn secondary" id="pauseToLobbyBtn">로비로 돌아가기</button>
+    </div>
+  </div>
+  <div class="overlay-screen hidden" id="screenResult">
+    <div class="lobby-title" style="font-size:38px;" id="resultTitle">RESULT</div>
+    <div class="lobby-result" id="resultText"></div>
+    <div class="btn-row">
+      <button class="action-btn primary" id="retryBtn">다시하기</button>
+      <button class="action-btn secondary" id="toLobbyBtn">로비로 돌아가기</button>
+    </div>
+  </div>
+  <canvas id="arena"></canvas>
+  <div class="hud" id="topbar">
+    <div class="hud-player-side">
+      <div class="name-tag" id="playerTag">YOU</div>
+      <div class="hp-bar-wrap">
+        <div class="hp-bar-fill" id="playerHpFill" style="width:100%"></div>
+        <div class="hp-text" id="playerHpText">100 / 100</div>
+      </div>
+      <div class="effects-row" id="playerEffects"></div>
+    </div>
+    <div></div>
+    <div class="hud-enemy-side">
+      <div class="name-tag" id="enemyTag">TARGET BOT</div>
+      <div class="hp-bar-wrap">
+        <div class="hp-bar-fill" id="enemyHpFill" style="width:100%"></div>
+        <div class="hp-text" id="enemyHpText">100 / 100</div>
+      </div>
+    </div>
+  </div>
+  <div class="hud" id="hint"><span id="hudHint">WASD 이동 · 마우스 조준 · 좌클릭 공격 · Q 이동스킬 · E 특수스킬</span></div>
+  <div class="hud" id="pauseHint">일시 정지</div>
+  <div class="hud" id="status"></div>
+  <div class="hud mobile-controls" id="mobileControls">
+    <div class="mobile-stick" id="moveStick">
+      <div class="stick-base"></div>
+      <div class="stick-knob"></div>
+      <div class="stick-label">이동</div>
+    </div>
+    <div class="mobile-stick attack-stick" id="attackStick">
+      <div class="stick-base"></div>
+      <div class="stick-knob"></div>
+      <div class="stick-label">평타</div>
+      <div class="skill-sticks-container">
+        <div class="skill-stick q" id="skillQStick">
+          <div class="stick-base"></div>
+          <div class="stick-knob"></div>
+          <div class="stick-label">Q</div>
+        </div>
+        <div class="skill-stick e" id="skillEStick">
+          <div class="stick-base"></div>
+          <div class="stick-knob"></div>
+          <div class="stick-label">E</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="hud" id="skillbar">
+    <div class="skill-slot" id="slotBasic">
+      <div class="key">LMB</div>
+      <div class="label" id="labelBasic">공격</div>
+      <div class="cooldown-overlay" id="cdBasic" style="height:0%"></div>
+      <div class="cooldown-text" id="cdTextBasic"></div>
+    </div>
+    <div class="skill-slot" id="slotQ">
+      <div class="key">Q</div>
+      <div class="label" id="labelQ">스킬</div>
+      <div class="cooldown-overlay" id="cdQ" style="height:0%"></div>
+      <div class="cooldown-text" id="cdTextQ"></div>
+    </div>
+    <div class="skill-slot" id="slotE">
+      <div class="key">E</div>
+      <div class="label" id="labelE">특수스킬</div>
+      <div class="cooldown-overlay" id="cdE" style="height:0%"></div>
+      <div class="cooldown-text" id="cdTextE"></div>
+    </div>
+  </div>
+  <script>
+    const canvas = document.getElementById('arena');
+    const ctx = canvas.getContext('2d');
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    resize();
+    window.addEventListener('resize', resize);
+
+    const keys = {};
+    const mouse = { x: 0, y: 0, down: false };
+    let mobileInput = { moveX: 0, moveY: 0, attackDirX: 0, attackDirY: 0, attackActive: false, qDirX: 0, qDirY: 0, qActive: false, eDirX: 0, eDirY: 0, eActive: false };
+    // Max distance the mobile aim line (attack/Q) can reach, via joystick tilt. Doubled from
+    // the previous 500 so the line reads more clearly on mobile.
+    const MOBILE_AIM_LINE_RANGE = 1000;
+    // Max distance the Mage's meteor can be aimed on mobile, via joystick tilt. Shared by
+    // both the actual cast (releaseCharge) and the telegraph preview so they always match.
+    // Doubled from the previous 420, and now equal to the aim line's own reach so the meteor
+    // always lands exactly at the tip of the rendered aim line.
+    const METEOR_AIM_RANGE = 840;
+    // Last non-zero direction the E stick was actually held at during the current charge.
+    // Read by both the telegraph preview and the real cast, so they can never disagree.
+    let lastEDirX = 0, lastEDirY = 0, hasEDir = false;
+    // 🔧 The exact point the telegraph circle was last drawn at (in world coords). The
+    // actual cast below reads this directly instead of recomputing its own target, so the
+    // meteor can never land somewhere slightly different from what was shown on screen —
+    // no more mismatch from the aim line's easing/smoothing being applied only visually.
+    let lastTelegraphX = null, lastTelegraphY = null;
+    // Smoothed on-screen length of the mobile aim line, so it visually "grows" toward its
+    // target length each frame instead of snapping there instantly. Keyed by which stick is
+    // currently driving it, so switching sticks doesn't inherit the wrong length.
+    let aimLineDisplay = { len: 0, key: null };
+    let isMobile = false;
+
+    // 🔧 모바일 감지를 가장 먼저 실행
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches) {
+      isMobile = true;
+      document.body.classList.add('mobile-ui');
+    }
+
+    // 🔧 Safety net only: if a stick's pointerup/pointercancel never reaches the stick
+    // element itself, this still cleans it up — but ONLY for the matching pointerId,
+    // so releasing an unrelated finger elsewhere on screen never resets a stick that's
+    // still actively held (this used to desync the knob and "freeze" it mid-position).
+    function forceReleaseMatchingStick(e) {
+      for (const stickType of ['move', 'attack', 'q', 'e']) {
+        if (activeStickPointers[stickType] === e.pointerId) {
+          handleStickUp(e, stickType);
+        }
+      }
+    }
+    window.addEventListener('pointerup', forceReleaseMatchingStick);
+    window.addEventListener('pointercancel', forceReleaseMatchingStick);
+
+    window.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        if (gameState === 'playing') pauseGame();
+        else if (gameState === 'paused') resumeGame();
+        return;
+      }
+      const k = e.key.toLowerCase();
+      if (!keys[k] && k === 'e') startCharging();
+      keys[k] = true;
+    });
+    window.addEventListener('keyup', e => {
+      const k = e.key.toLowerCase();
+      keys[k] = false;
+      if (k === 'e') releaseCharge();
+    });
+    // 🔧 isMobile has misdetected before, so gameplay/render decisions no longer trust it
+    // directly — instead we track whether real mouse movement has actually happened.
+    // A touch-only device never fires mousemove, so this flag stays false there no matter
+    // what isMobile reports, and correctly stays true on desktop as soon as the mouse moves.
+    let hasRealMouseInput = false;
+    canvas.addEventListener('mousemove', e => { hasRealMouseInput = true; mouse.x = e.clientX; mouse.y = e.clientY; });
+    canvas.addEventListener('mousedown', e => { if (e.button === 0) mouse.down = true; });
+    canvas.addEventListener('mouseup', e => { if (e.button === 0) mouse.down = false; });
+
+    const moveStick = document.getElementById('moveStick');
+    const attackStick = document.getElementById('attackStick');
+    const skillQStick = document.getElementById('skillQStick');
+    const skillEStick = document.getElementById('skillEStick');
+    const pauseHint = document.getElementById('pauseHint');
+
+    let activeStickPointers = { move: null, attack: null, q: null, e: null };
+
+    function getStickElement(stickType) {
+      if (stickType === 'move') return moveStick;
+      if (stickType === 'attack') return attackStick;
+      if (stickType === 'q') return skillQStick;
+      if (stickType === 'e') return skillEStick;
+      return null;
+    }
+
+    function updateStickPosition(stick, clientX, clientY, applyAimCurve) {
+      const rect = stick.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = clientX - cx;
+      const dy = clientY - cy;
+      const maxDist = rect.width * 0.35;
+      const len = Math.hypot(dx, dy);
+      const clamped = len > maxDist ? maxDist / len : 1;
+      const nx = dx * clamped;
+      const ny = dy * clamped;
+      const knob = stick.querySelector(':scope > .stick-knob');
+      if (knob) knob.style.transform = `translate(${nx}px, ${ny}px)`;
+      if (!applyAimCurve) {
+        // Movement stick: keep this linear/1:1 — only the aim sticks (attack/Q/E) get the
+        // reduced-sensitivity curve below, since it's specifically the aim line's reach
+        // that felt too sensitive, not character movement.
+        return { x: nx / maxDist, y: ny / maxDist };
+      }
+      // 🔧 Lower sensitivity: the knob above still tracks the finger 1:1 visually, but the
+      // logical output magnitude goes through a steeper ease-in curve — small/accidental
+      // nudges near the center barely register, and even a moderate push stays fairly
+      // short; only a near-full drag to the edge reaches full aim length.
+      const rawMag = Math.min(len / maxDist, 1);
+      const curvedMag = Math.pow(rawMag, 2.2);
+      const curveScale = rawMag > 0.001 ? curvedMag / rawMag : 0;
+      return { x: (nx / maxDist) * curveScale, y: (ny / maxDist) * curveScale };
+    }
+
+    function resetStick(stick) {
+      const knob = stick.querySelector(':scope > .stick-knob');
+      if (knob) knob.style.transform = 'translate(0, 0)';
+    }
+
+    function resetStickInput(stickType) {
+      if (stickType === 'move') { mobileInput.moveX = 0; mobileInput.moveY = 0; }
+      else if (stickType === 'attack') { mobileInput.attackActive = false; mobileInput.attackDirX = 0; mobileInput.attackDirY = 0; }
+      else if (stickType === 'q') { mobileInput.qActive = false; mobileInput.qDirX = 0; mobileInput.qDirY = 0; }
+      else if (stickType === 'e') { mobileInput.eActive = false; mobileInput.eDirX = 0; mobileInput.eDirY = 0; }
+    }
+
+    function handleStickDown(e, stickType) {
+      const stick = getStickElement(stickType);
+      if (!stick) return;
+      const pointerId = e.pointerId;
+      if (activeStickPointers[stickType] !== null) return;
+      activeStickPointers[stickType] = pointerId;
+      if (stick.setPointerCapture) {
+        try { stick.setPointerCapture(pointerId); } catch (err) { }
+      }
+      const pos = updateStickPosition(stick, e.clientX, e.clientY, stickType !== 'move');
+      if (stickType === 'move') { mobileInput.moveX = pos.x; mobileInput.moveY = pos.y; }
+      else if (stickType === 'attack') { mobileInput.attackDirX = pos.x; mobileInput.attackDirY = pos.y; mobileInput.attackActive = true; }
+      else if (stickType === 'q') { mobileInput.qDirX = pos.x; mobileInput.qDirY = pos.y; mobileInput.qActive = true; }
+      else if (stickType === 'e') {
+        mobileInput.eDirX = pos.x; mobileInput.eDirY = pos.y; mobileInput.eActive = true;
+        if (Math.hypot(pos.x, pos.y) > 0.1) { lastEDirX = pos.x; lastEDirY = pos.y; hasEDir = true; }
+        startCharging();
+      }
+    }
+
+    function handleStickMove(e, stickType) {
+      const pointerId = e.pointerId;
+      if (activeStickPointers[stickType] !== pointerId) return;
+      const stick = getStickElement(stickType);
+      if (!stick) return;
+      const pos = updateStickPosition(stick, e.clientX, e.clientY, stickType !== 'move');
+      if (stickType === 'move') { mobileInput.moveX = pos.x; mobileInput.moveY = pos.y; }
+      else if (stickType === 'attack') { mobileInput.attackDirX = pos.x; mobileInput.attackDirY = pos.y; }
+      else if (stickType === 'q') { mobileInput.qDirX = pos.x; mobileInput.qDirY = pos.y; }
+      else if (stickType === 'e') {
+        mobileInput.eDirX = pos.x; mobileInput.eDirY = pos.y;
+        if (Math.hypot(pos.x, pos.y) > 0.1) { lastEDirX = pos.x; lastEDirY = pos.y; hasEDir = true; }
+      }
+    }
+
+    function handleStickUp(e, stickType) {
+      const pointerId = e.pointerId;
+      const stick = getStickElement(stickType);
+      if (activeStickPointers[stickType] !== pointerId) return;
+      if (stick && stick.releasePointerCapture) {
+        try { stick.releasePointerCapture(pointerId); } catch (err) { }
+      }
+      activeStickPointers[stickType] = null;
+
+      // 🔥 CRITICAL FIX: Always release E charge when E stick is released
+      if (stickType === 'e') {
+        releaseCharge(); // This ensures E is cast even if dirLen <= 0.3
+      } else if (stickType === 'q') {
+        if (gameState === 'playing' && !roundEnding && cooldowns.q.cur <= 0 && mobileInput.qActive) {
+          const dirLen = Math.hypot(mobileInput.qDirX, mobileInput.qDirY);
+          if (dirLen > 0.3) {
+            useQSkill(player, player.x + mobileInput.qDirX * MOBILE_AIM_LINE_RANGE, player.y + mobileInput.qDirY * MOBILE_AIM_LINE_RANGE, 'player');
+            cooldowns.q.cur = cooldowns.q.max;
+          }
+        }
+      }
+
+      resetStickInput(stickType);
+      if (stick) resetStick(stick);
+    }
+
+    // 🔧 pointer 이벤트만 사용 (터치도 pointer로 통합)
+    function attachStickEvents(stickEl, stickType) {
+      stickEl.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleStickDown(e, stickType);
+      });
+      stickEl.addEventListener('pointermove', (e) => {
+        e.preventDefault();
+        handleStickMove(e, stickType);
+      });
+      stickEl.addEventListener('pointerup', (e) => {
+        handleStickUp(e, stickType);
+      });
+      stickEl.addEventListener('pointercancel', (e) => {
+        handleStickUp(e, stickType);
+      });
+      stickEl.addEventListener('lostpointercapture', (e) => {
+        handleStickUp(e, stickType);
+      });
+    }
+
+    attachStickEvents(moveStick, 'move');
+    attachStickEvents(attackStick, 'attack');
+    attachStickEvents(skillQStick, 'q');
+    attachStickEvents(skillEStick, 'e');
+
+    // 🔧 일시정지 버튼 - 모바일/PC 모두 처리
+    function handlePauseClick(e) {
+      e.stopPropagation();
+      if (gameState === 'playing') {
+        unlockAudio();
+        playSfx('buttonClick');
+        pauseGame();
+      }
+    }
+    pauseHint.addEventListener('click', handlePauseClick);
+    pauseHint.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      handlePauseClick(e);
+    }, { passive: false });
+
+    const CLASSES = {
+      striker: { name: 'STRIKER', color: '#4fd6c4', glow: '#4fd6c480', maxHp: 100, moveSpeed: 260, basicDmg: 11, basicSpeed: 620, basicCd: 0.35, basicHoming: 0, qCd: 3.5, eCd: 6.0, skills: { ko: { basic: '파동탄', q: '대시', e: '파열구' }, en: { basic: 'Pulse Shot', q: 'Dash', e: 'Burst' } }, details: { ko: { basic: "파동탄: 직진하는 높은 속도의 투사체를 발사합니다. (데미지: 11)", q: "대시: 지정한 방향으로 빠르게 돌진합니다. (쿨타임: 3.5초)", e: "파열구: 주변 넓은 범위에 강력한 폭발을 일으킵니다. (데미지: 24, 쿨타임: 6초)" }, en: { basic: "Pulse Shot: Fires a fast linear projectile. (Damage: 11)", q: "Dash: Rapidly dashes toward the target direction. (Cooldown: 3.5s)", e: "Burst: Causes a large explosion around yourself. (Damage: 24, Cooldown: 6s)" } } },
+      mage: { name: 'ARCANE MAGE', color: '#a970e8', glow: '#a970e880', maxHp: 85, moveSpeed: 240, basicDmg: 7.5, basicSpeed: 450, basicCd: 0.45, basicHoming: 0.3, qCd: 5.0, eCd: 8.0, skills: { ko: { basic: '유도 마탄', q: '점멸', e: '메테오' }, en: { basic: 'Arcane Bolt', q: 'Blink', e: 'Meteor' } }, details: { ko: { basic: "유도 마탄: 적을 향해 미세하게 유도되는 마탄을 발사합니다. (데미지: 7.5)", q: "점멸: 지정 위치로 순간 이동합니다. (쿨타임: 5초)", e: "메테오: 목표 위치에 1초 후 작고 강력한 운석을 떨어뜨립니다. (범위: 120, 데미지: 28, 쿨타임: 8초)" }, en: { basic: "Arcane Bolt: Fires a light homing bolt targeting the enemy. (Damage: 7.5)", q: "Blink: Teleports instantaneously toward target location. (Cooldown: 5s)", e: "Meteor: Calls down a compact meteor strike after 1s. (Radius: 120, Damage: 28, Cooldown: 8s)" } } },
+      assassin: { name: 'ASSASSIN', color: '#f2c744', glow: '#f2c74480', maxHp: 80, moveSpeed: 310, basicDmg: 8.5, basicSpeed: 820, basicCd: 0.25, basicHoming: 0, qCd: 2.8, eCd: 5.5, skills: { ko: { basic: '암습', q: '그림자 도약', e: '칼날 연무' }, en: { basic: 'Shadow Strike', q: 'Shadow Leap', e: 'Blade Volley' } }, details: { ko: { basic: "암습: 매우 빠른 속도의 암살용 칼날을 발사합니다. (데미지: 8.5)", q: "그림자 도약: 적의 공격을 피해 순식간에 도약합니다. (쿨타임: 2.8초)", e: "칼날 연무: 목표 방향으로 빠른 칼날 9개를 연속 난사합니다. (발당 데미지: 5, 쿨타임: 5.5초)" }, en: { basic: "Shadow Strike: Fires a high-speed blade projectile. (Damage: 8.5)", q: "Shadow Leap: Instantly leaps away to dodge attacks. (Cooldown: 2.8s)", e: "Blade Volley: Rapidly fires a barrage of 9 blades. (Damage/shot: 5, Cooldown: 5.5s)" } } },
+      paladin: { name: 'PALADIN', color: '#4ade80', glow: '#4ade8080', maxHp: 150, moveSpeed: 210, basicDmg: 11, basicSpeed: 500, basicCd: 0.55, basicHoming: 0, qCd: 4.0, eCd: 7.0, skills: { ko: { basic: '강격', q: '방패 돌진', e: '성스러운 충격' }, en: { basic: 'Slam', q: 'Shield Charge', e: 'Holy Nova' } }, details: { ko: { basic: "강격: 묵직한 충격 투사체를 발사합니다. (데미지: 11)", q: "방패 돌진: 전방으로 돌진합니다. (쿨타임: 4초)", e: "성스러운 충격: 주변에 강한 둔화/밀쳐내기 파동을 일으키고 대미지를 2회 무효화하는 보호막을 획득합니다. (데미지: 26, 쿨타임: 7초)" }, en: { basic: "Slam: Fires a heavy impact projectile. (Damage: 11)", q: "Shield Charge: Charges forward rapidly. (Cooldown: 4s)", e: "Holy Nova: Emits a knockback wave and gains a 2-stack invincibility shield. (Damage: 26, Cooldown: 7s)" } } }
+    };
+
+    let selectedClassKey = 'striker';
+    function makeEntity(x, y, color, glow, radius) {
+      return { x, y, radius, color, glow, hp: 100, maxHp: 100, alive: true, classKey: 'striker', angle: 0, dashUntil: 0, dashVx: 0, dashVy: 0, hitFlash: 0, slowUntil: 0, slowFactor: 1, knockbackVx: 0, knockbackVy: 0, knockbackDisplayUntil: 0, shieldStacks: 0, eCharging: false, eChargeStart: 0, qCd: 0, eCd: 0, rapidShotsLeft: 0, rapidShotTimer: 0, moveDirTimer: 0, moveDirAngle: 0, openingTimer: 0, openingDirY: 0, openingDashLockTimer: 0 };
+    }
+    const player = makeEntity(300, 400, '#4fd6c4', '#4fd6c480', 16);
+    const bot = makeEntity(900, 400, '#e0554f', '#e0554f80', 16);
+    const projectiles = [], auras = [], delayedMeteors = [], floatingTexts = [], particles = [];
+    const cooldowns = { basic: { cur: 0, max: 0.35 }, q: { cur: 0, max: 3.5 }, e: { cur: 0, max: 6 } };
+    let showDamageText = true;
+    let sfxVolume = parseFloat(localStorage.getItem('pvpProtoSfxVol')) || 0.7;
+    let uiScale = parseFloat(localStorage.getItem('pvpProtoUiScale')) || 1.0;
+    let startLabelTimer = 0, startLabelText = 'Me', roundEnding = false, lastHoverSfxTime = 0;
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playHoverSfx() { const now = performance.now(); if (now - lastHoverSfxTime < 100) return; lastHoverSfxTime = now; playSfx('buttonHover'); }
+    function playSfx(kind) {
+      if (sfxVolume <= 0) return;
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const now = audioCtx.currentTime;
+      const output = audioCtx.createGain();
+      output.gain.setValueAtTime(0.0001, now);
+      const filter = audioCtx.createBiquadFilter();
+      filter.Q.setValueAtTime(1.6, now);
+      const oscA = audioCtx.createOscillator();
+      const oscB = audioCtx.createOscillator();
+      let hasOscB = false, duration = 0.12, envelopePeak = Math.max(0.001, sfxVolume), filterFreq = 1200, filterType = 'lowpass', typeA = 'sine', typeB = 'triangle', noise = false, noiseGainLevel = 0;
+      switch (kind) {
+        case 'shoot': typeA = 'square'; typeB = 'triangle'; oscA.frequency.setValueAtTime(780, now); oscB.frequency.setValueAtTime(1140, now); hasOscB = true; duration = 0.14; filterFreq = 2800; filterType = 'highpass'; noise = true; noiseGainLevel = 0.14; break;
+        case 'enemyShoot': typeA = 'triangle'; typeB = 'sawtooth'; oscA.frequency.setValueAtTime(520, now); oscB.frequency.setValueAtTime(700, now); hasOscB = true; duration = 0.14; filterFreq = 1900; filterType = 'lowpass'; noise = true; noiseGainLevel = 0.08; break;
+        case 'hit': typeA = 'triangle'; typeB = 'sawtooth'; oscA.frequency.setValueAtTime(260, now); oscB.frequency.setValueAtTime(190, now); hasOscB = true; duration = 0.1; filterFreq = 1100; filterType = 'lowpass'; break;
+        case 'block': typeA = 'square'; typeB = 'triangle'; oscA.frequency.setValueAtTime(180, now); oscB.frequency.setValueAtTime(120, now); hasOscB = true; duration = 0.12; filterFreq = 1000; filterType = 'lowpass'; break;
+        case 'burst': typeA = 'triangle'; typeB = 'sine'; oscA.frequency.setValueAtTime(430, now); oscB.frequency.setValueAtTime(330, now); hasOscB = true; duration = 0.22; filterFreq = 1400; filterType = 'bandpass'; noise = true; noiseGainLevel = 0.1; break;
+        case 'dash': typeA = 'square'; typeB = 'triangle'; oscA.frequency.setValueAtTime(640, now); oscB.frequency.setValueAtTime(520, now); hasOscB = true; duration = 0.12; filterFreq = 2200; filterType = 'bandpass'; break;
+        case 'start': typeA = 'triangle'; typeB = 'sine'; oscA.frequency.setValueAtTime(760, now); oscB.frequency.setValueAtTime(1000, now); hasOscB = true; duration = 0.18; filterFreq = 2300; filterType = 'lowpass'; noise = true; noiseGainLevel = 0.1; break;
+        case 'victory': typeA = 'triangle'; typeB = 'sine'; oscA.frequency.setValueAtTime(780, now); oscB.frequency.setValueAtTime(1180, now); hasOscB = true; duration = 0.50; envelopePeak = Math.max(0.001, sfxVolume) * 1.2; filterFreq = 2200; filterType = 'lowpass'; noise = true; noiseGainLevel = 0.18; break;
+        case 'defeat': typeA = 'square'; typeB = 'triangle'; oscA.frequency.setValueAtTime(260, now); oscB.frequency.setValueAtTime(170, now); hasOscB = true; duration = 0.45; envelopePeak = Math.max(0.001, sfxVolume) * 0.95; filterFreq = 900; filterType = 'lowpass'; noise = true; noiseGainLevel = 0.14; break;
+        case 'buttonClick': typeA = 'square'; typeB = 'triangle'; oscA.frequency.setValueAtTime(1450, now); oscB.frequency.setValueAtTime(1680, now); hasOscB = true; duration = 0.07; filterFreq = 3400; filterType = 'highpass'; noise = true; noiseGainLevel = 0.25; break;
+        case 'buttonHover': typeA = 'sine'; typeB = 'triangle'; oscA.frequency.setValueAtTime(1600, now); oscB.frequency.setValueAtTime(1320, now); hasOscB = true; duration = 0.06; filterFreq = 3800; filterType = 'highpass'; noise = true; noiseGainLevel = 0.16; break;
+        default: typeA = 'sine'; oscA.frequency.setValueAtTime(440, now); duration = 0.12; filterFreq = 1500; filterType = 'lowpass';
+      }
+      oscA.type = typeA; oscA.connect(filter);
+      if (hasOscB) { oscB.type = typeB; oscB.connect(filter); }
+      filter.type = filterType; filter.frequency.setValueAtTime(filterFreq, now); filter.connect(output); output.connect(audioCtx.destination);
+      if (noise) {
+        const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * duration, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+        const noiseSource = audioCtx.createBufferSource();
+        noiseSource.buffer = buffer;
+        const ng = audioCtx.createGain();
+        ng.gain.setValueAtTime(noiseGainLevel * sfxVolume, now);
+        noiseSource.connect(ng).connect(output);
+        noiseSource.start(now); noiseSource.stop(now + duration);
+      }
+      output.gain.setValueAtTime(0.0001, now);
+      output.gain.exponentialRampToValueAtTime(envelopePeak, now + 0.006);
+      output.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      oscA.start(now); if (hasOscB) oscB.start(now);
+      oscA.stop(now + duration); if (hasOscB) oscB.stop(now + duration);
+    }
+
+    const I18N = {
+      ko: { lobbySub: '전장에 참여하여 승리하세요', startBtn: '전투 시작', selectClassBtn: '클래스 선택', settingsBtn: '설정', classTitle: 'CLASS SELECT', classSub: '전투에 사용할 클래스를 선택하세요', confirmBtn: '확인', cNameStriker: '스트라이커', cDescStriker: '균형 잡힌 원거리 투사체 공격과 대시, 파열구 범위 기술을 사용합니다.', cNameMage: '아케인 메이지', cDescMage: '약한 유도 탄환과 점멸, 마우스 위치에 1초 뒤 낙하하는 메테오를 사용합니다.', cNameAssassin: '어쌔신', cDescAssassin: '그림자 도약 후, 마우스 방향으로 빠른 암살용 칼날 탄환들을 난사합니다.', cNamePaladin: '팔라딘', cDescPaladin: '근접 충격파 발사 후 대미지를 2회 막아주는 성스러운 보호막을 획득합니다.', playerTag: '나', enemyTagPrefix: '봇 (', settingsTitle: 'SETTINGS', settingsSub: '게임 설정을 변경할 수 있습니다', damageTextLabel: '대미지 표시', toggleOn: 'ON', toggleOff: 'OFF', closeBtn: '닫기', soundVolumeLabel: '사운드 볼륨', sliderTitle: '볼륨', uiScaleLabel: 'UI 크기', uiScaleTitle: '크기', uiPreviewBtn: 'UI 미리보기', leavePreviewBtn: '나가기', pauseHintText: 'ESC로 일시 정지', pauseBtnText: '일시 정지', skillDetailBtn: '스킬 설명', diffTitle: '난이도 선택', diffSub: '상대의 속도 · 공격 빈도 · 스킬 사용을 결정해요', diffEasy: '쉬움', diffNormal: '보통', diffHard: '어려움', diffNightmare: '악몽', backBtn: '뒤로가기', pausedTitle: 'PAUSED', pausedSub: '게임이 일시 정지되었습니다', resumeBtn: '게임 계속하기', pauseToLobbyBtn: '로비로 돌아가기', retryBtn: '다시하기', toLobbyBtn: '로비로 돌아가기', hudHint: 'WASD 이동 · 마우스 조준 · 좌클릭 공격 · Q 스킬 · E 특수스킬', resultVictoryTitle: 'VICTORY', resultDefeatTitle: 'DEFEAT', resultVictoryText: '승리했습니다', resultDefeatText: '패배했습니다', statusVictory: 'VICTORY', statusDefeat: 'DEFEAT' },
+      en: { lobbySub: 'Enter the arena and claim your victory', startBtn: 'START BATTLE', selectClassBtn: 'SELECT CLASS', settingsBtn: 'SETTINGS', classTitle: 'CLASS SELECT', classSub: 'Select your class before battle', confirmBtn: 'CONFIRM', cNameStriker: 'STRIKER', cDescStriker: 'Balanced ranged pulse shots, directional dash, and radial burst explosion.', cNameMage: 'ARCANE MAGE', cDescMage: 'Light homing bolts, instantaneous blink, and delayed targeted meteor strike.', cNameAssassin: 'ASSASSIN', cDescAssassin: 'High mobility shadow leap and rapid directional blade projectile barrage.', cNamePaladin: 'PALADIN', cDescPaladin: 'Close-range holy burst with a 2-stack invincibility shield after cast.', playerTag: 'YOU', enemyTagPrefix: 'BOT (', settingsTitle: 'SETTINGS', settingsSub: 'Change your game settings', damageTextLabel: 'Damage Numbers', toggleOn: 'ON', toggleOff: 'OFF', closeBtn: 'Close', soundVolumeLabel: 'Sound Volume', sliderTitle: 'VOLUME', uiScaleLabel: 'UI SIZE', uiScaleTitle: 'SIZE', uiPreviewBtn: 'UI PREVIEW', leavePreviewBtn: 'EXIT PREVIEW', pauseHintText: 'Press ESC to pause', pauseBtnText: 'PAUSE', skillDetailBtn: 'SKILL INFO', diffTitle: 'SELECT DIFFICULTY', diffSub: "Determines opponent's speed, attack frequency, and skill behavior", diffEasy: 'EASY', diffNormal: 'NORMAL', diffHard: 'HARD', diffNightmare: 'NIGHTMARE', backBtn: 'Back', pausedTitle: 'PAUSED', pausedSub: 'The game is paused', resumeBtn: 'RESUME', pauseToLobbyBtn: 'RETURN TO LOBBY', retryBtn: 'RETRY', toLobbyBtn: 'RETURN TO LOBBY', hudHint: 'WASD Move · Mouse Aim · LMB Attack · Q Skill · E Special', resultVictoryTitle: 'VICTORY', resultDefeatTitle: 'DEFEAT', resultVictoryText: 'You Won', resultDefeatText: 'You Lost', statusVictory: 'VICTORY', statusDefeat: 'DEFEAT' }
+    };
+
+    let currentLang = localStorage.getItem('pvpProtoLang') || 'ko';
+    let lastResultKind = null;
+
+    function getLocalizedClassName(classKey) {
+      const capitalized = classKey.charAt(0).toUpperCase() + classKey.slice(1);
+      const key = `cName${capitalized}`;
+      return I18N[currentLang][key] || CLASSES[classKey].name;
+    }
+
+    // 🔧 일시정지 텍스트 업데이트 함수
+    function updatePauseHintText() {
+      const t = I18N[currentLang];
+      pauseHint.textContent = t.pauseBtnText;
+    }
+
+    function applyLanguage(lang) {
+      currentLang = lang;
+      localStorage.setItem('pvpProtoLang', lang);
+      const t = I18N[lang];
+      document.getElementById('lobbySub').textContent = t.lobbySub;
+      document.getElementById('mainStartBtn').textContent = t.startBtn;
+      document.getElementById('mainClassBtn').textContent = t.selectClassBtn;
+      document.getElementById('mainSettingsBtn').textContent = t.settingsBtn;
+      document.getElementById('classTitle').textContent = t.classTitle;
+      document.getElementById('classSub').textContent = t.classSub;
+      document.getElementById('closeClassBtn').textContent = t.confirmBtn;
+      document.getElementById('cNameStriker').textContent = t.cNameStriker;
+      document.getElementById('cDescStriker').textContent = t.cDescStriker;
+      document.getElementById('cNameMage').textContent = t.cNameMage;
+      document.getElementById('cDescMage').textContent = t.cDescMage;
+      document.getElementById('cNameAssassin').textContent = t.cNameAssassin;
+      document.getElementById('cDescAssassin').textContent = t.cDescAssassin;
+      document.getElementById('cNamePaladin').textContent = t.cNamePaladin;
+      document.getElementById('cDescPaladin').textContent = t.cDescPaladin;
+      document.querySelectorAll('.skill-detail-btn').forEach(btn => btn.textContent = t.skillDetailBtn);
+      document.getElementById('settingsTitle').textContent = t.settingsTitle;
+      document.getElementById('settingsSub').textContent = t.settingsSub;
+      document.getElementById('damageTextLabel').textContent = t.damageTextLabel;
+      document.getElementById('soundVolumeLabel').textContent = t.soundVolumeLabel;
+      document.getElementById('volumeTitle').textContent = t.sliderTitle;
+      document.getElementById('uiScaleLabel').textContent = t.uiScaleLabel;
+      document.getElementById('uiScaleTitle').textContent = t.uiScaleTitle;
+      document.getElementById('openUiPreviewBtn').textContent = t.uiPreviewBtn;
+      document.getElementById('closeUiPreviewBtn').textContent = t.leavePreviewBtn;
+      updatePauseHintText(); // 🔧 모바일/PC 구분하여 텍스트 설정
+      toggleDamageTextBtn.textContent = showDamageText ? t.toggleOn : t.toggleOff;
+      document.getElementById('closeSettingsBtn').textContent = t.closeBtn;
+      document.getElementById('diffTitle').textContent = t.diffTitle;
+      document.getElementById('diffSub').textContent = t.diffSub;
+      document.querySelector('.diff-btn.easy').textContent = t.diffEasy;
+      document.querySelector('.diff-btn.normal').textContent = t.diffNormal;
+      document.querySelector('.diff-btn.hard').textContent = t.diffHard;
+      document.querySelector('.diff-btn.nightmare').textContent = t.diffNightmare;
+      document.getElementById('confirmStartBtn').textContent = t.startBtn;
+      document.getElementById('backToLobbyBtn').textContent = t.backBtn;
+      document.getElementById('pausedTitle').textContent = t.pausedTitle;
+      document.getElementById('pausedSub').textContent = t.pausedSub;
+      document.getElementById('resumeBtn').textContent = t.resumeBtn;
+      document.getElementById('pauseToLobbyBtn').textContent = t.pauseToLobbyBtn;
+      document.getElementById('retryBtn').textContent = t.retryBtn;
+      document.getElementById('toLobbyBtn').textContent = t.toLobbyBtn;
+      document.getElementById('hudHint').innerHTML = t.hudHint;
+      document.getElementById('playerTag').textContent = t.playerTag;
+      const enemyLabel = `${t.enemyTagPrefix}${getLocalizedClassName(bot.classKey)})`;
+      document.getElementById('enemyTag').textContent = enemyLabel;
+      const cls = CLASSES[selectedClassKey];
+      document.getElementById('labelBasic').textContent = cls.skills[lang].basic;
+      document.getElementById('labelQ').textContent = cls.skills[lang].q;
+      document.getElementById('labelE').textContent = cls.skills[lang].e;
+      if (lastResultKind === 'win') { resultTitleEl.textContent = t.resultVictoryTitle; resultTextEl.textContent = t.resultVictoryText; }
+      else if (lastResultKind === 'lose') { resultTitleEl.textContent = t.resultDefeatTitle; resultTextEl.textContent = t.resultDefeatText; }
+      document.getElementById('langKoBtn').classList.toggle('active', lang === 'ko');
+      document.getElementById('langEnBtn').classList.toggle('active', lang === 'en');
+      document.documentElement.lang = lang;
+    }
+
+    document.getElementById('langKoBtn').addEventListener('click', () => applyLanguage('ko'));
+    document.getElementById('langEnBtn').addEventListener('click', () => applyLanguage('en'));
+    document.getElementById('langKoBtn').addEventListener('touchstart', (e) => { e.preventDefault(); applyLanguage('ko'); }, { passive: false });
+    document.getElementById('langEnBtn').addEventListener('touchstart', (e) => { e.preventDefault(); applyLanguage('en'); }, { passive: false });
+
+    function applyClassAccent() { document.documentElement.style.setProperty('--class-accent', CLASSES[selectedClassKey].color); }
+    document.querySelectorAll('.class-card').forEach(card => {
+      card.addEventListener('click', (e) => {
+        if (e.target.classList.contains('skill-detail-btn')) return;
+        document.querySelectorAll('.class-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+        selectedClassKey = card.dataset.class;
+        applyClassAccent();
+        applyLanguage(currentLang);
+      });
+      card.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (e.target.classList.contains('skill-detail-btn')) return;
+        document.querySelectorAll('.class-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+        selectedClassKey = card.dataset.class;
+        applyClassAccent();
+        applyLanguage(currentLang);
+      }, { passive: false });
+    });
+
+    document.querySelectorAll('.skill-detail-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => { e.stopPropagation(); openSkillDetailModal(btn.dataset.classDetail); });
+      btn.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); openSkillDetailModal(btn.dataset.classDetail); }, { passive: false });
+    });
+
+    function openSkillDetailModal(classKey) {
+      const cls = CLASSES[classKey];
+      const lang = currentLang;
+      const modal = document.getElementById('skillDetailModal');
+      const modalContent = document.getElementById('modalContent');
+      const modalTitle = document.getElementById('modalClassTitle');
+      const modalList = document.getElementById('modalSkillList');
+      modalContent.style.borderColor = cls.color;
+      modalTitle.textContent = `${cls.skills[lang].basic} / ${cls.skills[lang].q} / ${cls.skills[lang].e}`;
+      modalTitle.style.color = cls.color;
+      const details = cls.details[lang];
+      modalList.innerHTML = `
     <div class="modal-skill-item"><div class="modal-skill-name" style="color:${cls.color}">[LMB] ${cls.skills[lang].basic}</div><div class="modal-skill-desc">${details.basic}</div></div>
     <div class="modal-skill-item"><div class="modal-skill-name" style="color:${cls.color}">[Q] ${cls.skills[lang].q}</div><div class="modal-skill-desc">${details.q}</div></div>
     <div class="modal-skill-item"><div class="modal-skill-name" style="color:${cls.color}">[E] ${cls.skills[lang].e}</div><div class="modal-skill-desc">${details.e}</div></div>
   `;
-  modal.classList.remove('hidden');
-}
-
-document.getElementById('closeModalBtn').addEventListener('click', () => { document.getElementById('skillDetailModal').classList.add('hidden'); });
-document.getElementById('closeModalBtn').addEventListener('touchstart', (e) => { e.preventDefault(); document.getElementById('skillDetailModal').classList.add('hidden'); }, { passive: false });
-
-applyClassAccent();
-
-const DIFFICULTY = {
-  easy: { speedMult: 0.8, shootMin: 1.25, shootMax: 1.75, dmgMult: 1.00, qCooldown: 5.5, eCooldown: 9.0, homing: 0.38 },
-  normal: { speedMult: 1.0, shootMin: 0.95, shootMax: 1.35, dmgMult: 1.18, qCooldown: 3.8, eCooldown: 6.2, homing: 0.72 },
-  hard: { speedMult: 1.4, shootMin: 0.50, shootMax: 0.80, dmgMult: 1.45, qCooldown: 2.1, eCooldown: 3.8, homing: 1.05 },
-  nightmare: { speedMult: 1.8, shootMin: 0.40, shootMax: 0.70, dmgMult: 1.9, qCooldown: 1.0, eCooldown: 2.3, homing: 1.4 }
-};
-let difficultyKey = 'normal';
-let currentDifficulty = DIFFICULTY[difficultyKey];
-let botShootTimer = 0, statusTimer = 0, gameState = 'lobby';
-
-const screenMain = document.getElementById('screenMain');
-const screenClassSelect = document.getElementById('screenClassSelect');
-const screenSettings = document.getElementById('screenSettings');
-const screenDifficulty = document.getElementById('screenDifficulty');
-const screenPause = document.getElementById('screenPause');
-const screenResult = document.getElementById('screenResult');
-const resultTitleEl = document.getElementById('resultTitle');
-const resultTextEl = document.getElementById('resultText');
-
-function hideAllScreens() {
-  screenMain.classList.add('hidden');
-  screenClassSelect.classList.add('hidden');
-  screenSettings.classList.add('hidden');
-  screenDifficulty.classList.add('hidden');
-  screenPause.classList.add('hidden');
-  screenResult.classList.add('hidden');
-}
-function hidePreviewModal() {
-  previewMode = false;
-  document.body.classList.remove('preview-mode');
-  if (typeof uiPreviewModal !== 'undefined') uiPreviewModal.classList.add('hidden');
-}
-function showMainScreen() { hidePreviewModal(); gameState = 'lobby'; hideAllScreens(); screenMain.classList.remove('hidden'); document.body.classList.remove('show-hud'); }
-function showClassSelectScreen() { hidePreviewModal(); hideAllScreens(); screenClassSelect.classList.remove('hidden'); document.body.classList.remove('show-hud'); }
-function showSettingsScreen() { hidePreviewModal(); hideAllScreens(); screenSettings.classList.remove('hidden'); document.body.classList.remove('show-hud'); }
-function showDifficultyScreen() { hidePreviewModal(); gameState = 'lobby'; hideAllScreens(); screenDifficulty.classList.remove('hidden'); document.body.classList.remove('show-hud'); }
-function pauseGame() { if (gameState !== 'playing') return; hidePreviewModal(); gameState = 'paused'; hideAllScreens(); screenPause.classList.remove('hidden'); }
-function resumeGame() { if (gameState !== 'paused') return; hidePreviewModal(); gameState = 'playing'; hideAllScreens(); lastTime = performance.now(); document.body.classList.add('show-hud'); }
-function showResultScreen(title, text, resultClass) {
-  hidePreviewModal();
-  gameState = 'lobby';
-  resultTitleEl.textContent = title;
-  resultTitleEl.style.color = resultClass === 'win' ? 'var(--accent-player)' : 'var(--accent-enemy)';
-  resultTextEl.textContent = text;
-  resultTextEl.className = 'lobby-result' + (resultClass ? ' ' + resultClass : '');
-  hideAllScreens();
-  screenResult.classList.remove('hidden');
-}
-
-function addClickHandler(element, handler) {
-  element.addEventListener('click', () => { unlockAudio(); playSfx('buttonClick'); handler(); });
-  element.addEventListener('touchstart', (e) => { e.preventDefault(); unlockAudio(); playSfx('buttonClick'); handler(); }, { passive: false });
-}
-
-addClickHandler(document.getElementById('mainStartBtn'), showDifficultyScreen);
-addClickHandler(document.getElementById('mainClassBtn'), showClassSelectScreen);
-addClickHandler(document.getElementById('closeClassBtn'), showMainScreen);
-addClickHandler(document.getElementById('mainSettingsBtn'), showSettingsScreen);
-addClickHandler(document.getElementById('backToLobbyBtn'), showMainScreen);
-addClickHandler(document.getElementById('closeSettingsBtn'), () => {
-  if (gameState === 'paused') { screenPause.classList.remove('hidden'); screenSettings.classList.add('hidden'); }
-  else showMainScreen();
-});
-
-const toggleDamageTextBtn = document.getElementById('toggleDamageTextBtn');
-addClickHandler(toggleDamageTextBtn, () => {
-  showDamageText = !showDamageText;
-  const t = I18N[currentLang];
-  toggleDamageTextBtn.textContent = showDamageText ? t.toggleOn : t.toggleOff;
-  toggleDamageTextBtn.classList.toggle('off', !showDamageText);
-});
-
-const sfxVolumeSlider = document.getElementById('sfxVolumeSlider');
-const sfxVolumeValue = document.getElementById('soundVolumeValue');
-const uiScaleSlider = document.getElementById('uiScaleSlider');
-const uiScaleValue = document.getElementById('uiScaleValue');
-let previewMode = false;
-function updateSfxDisplay() { sfxVolume = parseFloat(sfxVolumeSlider.value); localStorage.setItem('pvpProtoSfxVol', sfxVolume.toString()); sfxVolumeValue.textContent = `${Math.round(sfxVolume * 100)}%`; }
-function updateUiScaleDisplay() { uiScale = parseFloat(uiScaleSlider.value); localStorage.setItem('pvpProtoUiScale', uiScale.toString()); uiScaleValue.textContent = `${Math.round(uiScale * 100)}%`; document.documentElement.style.setProperty('--ui-scale', uiScale.toString()); }
-function updatePreviewHud() {
-  const pHpNorm = Math.max(0, player.hp / player.maxHp);
-  const eHpNorm = Math.max(0, bot.hp / bot.maxHp);
-  document.getElementById('playerHpFill').style.width = `${pHpNorm * 100}%`;
-  document.getElementById('enemyHpFill').style.width = `${eHpNorm * 100}%`;
-  document.getElementById('playerHpText').textContent = `${player.hp.toFixed(1)} / ${player.maxHp.toFixed(1)}`;
-  document.getElementById('enemyHpText').textContent = `${bot.hp.toFixed(1)} / ${bot.maxHp.toFixed(1)}`;
-  document.getElementById('cdBasic').style.height = `${(cooldowns.basic.cur / cooldowns.basic.max) * 100}%`;
-  document.getElementById('cdQ').style.height = `${(cooldowns.q.cur / cooldowns.q.max) * 100}%`;
-  document.getElementById('cdE').style.height = `${(cooldowns.e.cur / cooldowns.e.max) * 100}%`;
-  document.getElementById('cdTextBasic').textContent = cooldowns.basic.cur > 0 ? `${cooldowns.basic.cur.toFixed(1)}s` : '';
-  document.getElementById('cdTextQ').textContent = cooldowns.q.cur > 0 ? `${cooldowns.q.cur.toFixed(1)}s` : '';
-  document.getElementById('cdTextE').textContent = cooldowns.e.cur > 0 ? `${cooldowns.e.cur.toFixed(1)}s` : '';
-  document.getElementById('slotQ').classList.toggle('charging', player.eCharging);
-  let chips = '';
-  const nowT = now_ms();
-  if (player.shieldStacks > 0) chips += `<span class="effect-chip shield">SHIELD (${player.shieldStacks})</span>`;
-  if (nowT < player.slowUntil) chips += `<span class="effect-chip slow">SLOW</span>`;
-  if (nowT < player.knockbackDisplayUntil) chips += `<span class="effect-chip knockback">KNOCKBACK</span>`;
-  document.getElementById('playerEffects').innerHTML = chips;
-}
-function enterPreviewMode() { previewMode = true; gameState = 'preview'; hideAllScreens(); document.body.classList.add('show-hud', 'preview-mode'); updatePreviewHud(); uiPreviewModal.classList.remove('hidden'); }
-function exitPreviewMode() { hidePreviewModal(); gameState = 'lobby'; document.body.classList.remove('show-hud'); showSettingsScreen(); }
-
-const openUiPreviewBtn = document.getElementById('openUiPreviewBtn');
-const uiPreviewModal = document.getElementById('uiPreviewModal');
-const closeUiPreviewBtn = document.getElementById('closeUiPreviewBtn');
-
-addClickHandler(openUiPreviewBtn, enterPreviewMode);
-addClickHandler(closeUiPreviewBtn, exitPreviewMode);
-
-uiPreviewModal.addEventListener('click', (e) => { if (e.target === uiPreviewModal) exitPreviewMode(); });
-sfxVolumeSlider.value = sfxVolume.toString();
-uiScaleSlider.value = uiScale.toString();
-sfxVolumeSlider.addEventListener('input', updateSfxDisplay);
-uiScaleSlider.addEventListener('input', updateUiScaleDisplay);
-updateSfxDisplay();
-updateUiScaleDisplay();
-
-function unlockAudio() { if (audioCtx.state === 'suspended') audioCtx.resume(); }
-document.body.addEventListener('pointerdown', unlockAudio, { once: true });
-document.body.addEventListener('keydown', unlockAudio, { once: true });
-
-document.querySelectorAll('button').forEach(element => {
-  if (!element.closest('.class-card')) {
-    element.addEventListener('mouseenter', () => { unlockAudio(); playSfx('buttonHover'); });
-  }
-});
-
-addClickHandler(document.getElementById('confirmStartBtn'), startMatch);
-addClickHandler(document.getElementById('resumeBtn'), resumeGame);
-addClickHandler(document.getElementById('pauseToLobbyBtn'), showMainScreen);
-addClickHandler(document.getElementById('retryBtn'), showDifficultyScreen);
-addClickHandler(document.getElementById('toLobbyBtn'), showMainScreen);
-
-document.querySelectorAll('.diff-btn').forEach(btn => {
-  addClickHandler(btn, () => {
-    document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    difficultyKey = btn.dataset.diff;
-  });
-});
-
-function startMatch() {
-  hidePreviewModal();
-  currentDifficulty = DIFFICULTY[difficultyKey];
-  resetRound();
-  previewMode = false;
-  gameState = 'playing';
-  hideAllScreens();
-  document.body.classList.add('show-hud');
-  lastTime = performance.now();
-  startLabelTimer = 2.0;
-  startLabelText = currentLang === 'ko' ? '나' : 'Me';
-  playSfx('start');
-}
-
-function showStatus(text, color) {
-  const el = document.getElementById('status');
-  el.textContent = text;
-  el.style.color = color || '#e8edf2';
-  el.classList.add('show');
-  statusTimer = 1.4;
-}
-
-function dist(ax, ay, bx, by) { return Math.hypot(ax - bx, ay - by); }
-function now_ms() { return performance.now(); }
-
-function resetEntityState(e, x, y, isPlayer) {
-  let classKey = selectedClassKey;
-  if (!isPlayer) {
-    const classKeys = Object.keys(CLASSES);
-    classKey = classKeys[Math.floor(Math.random() * classKeys.length)];
-  }
-  const cls = CLASSES[classKey];
-  e.classKey = classKey;
-  e.maxHp = cls.maxHp;
-  e.hp = cls.maxHp;
-  e.color = cls.color;
-  e.glow = cls.glow;
-  if (isPlayer) { cooldowns.basic.max = cls.basicCd; cooldowns.q.max = cls.qCd; cooldowns.e.max = cls.eCd; }
-  else {
-    const enemyLabel = `${I18N[currentLang].enemyTagPrefix}${getLocalizedClassName(classKey)})`;
-    document.getElementById('enemyTag').textContent = enemyLabel;
-  }
-  e.alive = true;
-  e.x = x; e.y = y;
-  e.angle = 0;
-  e.dashUntil = 0; e.dashVx = 0; e.dashVy = 0; e.hitFlash = 0;
-  e.slowUntil = 0; e.slowFactor = 1;
-  e.knockbackVx = 0; e.knockbackVy = 0; e.knockbackDisplayUntil = 0;
-  e.shieldStacks = 0;
-  e.eCharging = false; e.eChargeStart = 0;
-  e.qCd = 0; e.eCd = 0;
-  e.rapidShotsLeft = 0; e.rapidShotTimer = 0;
-  e.moveDirTimer = 0; e.moveDirAngle = 0;
-  e.openingTimer = 2.0 + Math.random() * 1.5;
-  e.openingDirY = Math.random() < 0.5 ? -1 : 1;
-  e.openingDashLockTimer = 2.5 + Math.random() * 1.0;
-}
-
-function resetRound() {
-  resetEntityState(player, canvas.width * 0.12, canvas.height * 0.5, true);
-  resetEntityState(bot, canvas.width * 0.88, canvas.height * 0.5, false);
-  projectiles.length = 0; auras.length = 0; delayedMeteors.length = 0; floatingTexts.length = 0; particles.length = 0;
-  botShootTimer = 0.8;
-  cooldowns.basic.cur = 0; cooldowns.q.cur = 0; cooldowns.e.cur = 0;
-  roundEnding = false;
-}
-
-function fireProjectile(from, tx, ty, color, dmg, owner, speed, homing, type = 'normal') {
-  const dx = tx - from.x, dy = ty - from.y;
-  const len = Math.hypot(dx, dy) || 1;
-  const radius = type === 'blade' ? 4 : 6;
-  const life = type === 'blade' ? 1.2 : 1.8;
-  projectiles.push({ x: from.x, y: from.y, vx: (dx / len) * speed, vy: (dy / len) * speed, owner, radius, color, dmg, life, homing: homing || 0, type: type });
-  if (owner === 'player') playSfx('shoot');
-  else playSfx('enemyShoot');
-}
-
-function useQSkill(caster, targetX, targetY, owner) {
-  const cls = CLASSES[caster.classKey];
-  const dx = targetX - caster.x, dy = targetY - caster.y;
-  const len = Math.hypot(dx, dy) || 1;
-  if (caster.classKey === 'mage') {
-    const blinkDist = Math.min(len, 300);
-    caster.x += (dx / len) * blinkDist;
-    caster.y += (dy / len) * blinkDist;
-    caster.x = Math.max(20, Math.min(canvas.width - 20, caster.x));
-    caster.y = Math.max(20, Math.min(canvas.height - 20, caster.y));
-    spawnDeathParticles(caster.x, caster.y, cls.color);
-  } else if (caster.classKey === 'assassin') {
-    caster.x += (dx / len) * 260;
-    caster.y += (dy / len) * 260;
-    caster.x = Math.max(20, Math.min(canvas.width - 20, caster.x));
-    caster.y = Math.max(20, Math.min(canvas.height - 20, caster.y));
-    spawnDeathParticles(caster.x, caster.y, cls.color);
-  } else {
-    const dashSpeed = caster.classKey === 'paladin' ? 1400 : 1700;
-    caster.dashVx = (dx / len) * dashSpeed;
-    caster.dashVy = (dy / len) * dashSpeed;
-    caster.dashUntil = now_ms() + 200;
-  }
-  if (owner === 'player') { cooldowns.q.cur = cooldowns.q.max; playSfx('dash'); }
-  else caster.qCd = currentDifficulty.qCooldown;
-}
-
-function castBurst(caster, owner, targetX, targetY) {
-  if (caster.classKey === 'mage') delayedMeteors.push({ x: targetX, y: targetY, delay: 0.7, maxDelay: 0.7, radius: 120, dmg: 28, owner });
-  else if (caster.classKey === 'assassin') { caster.rapidShotsLeft = 9; caster.rapidShotTimer = 0; }
-  else if (caster.classKey === 'paladin') { auras.push({ x: caster.x, y: caster.y, r: 0, maxR: 110, dmg: 26, life: 0.35, dealt: false, owner }); caster.shieldStacks = 2; }
-  else auras.push({ x: caster.x, y: caster.y, r: 0, maxR: 210, dmg: 24, life: 0.35, dealt: false, owner });
-  if (owner === 'player') { cooldowns.e.cur = cooldowns.e.max; playSfx('burst'); }
-  else { caster.eCd = currentDifficulty.eCooldown; playSfx('burst'); }
-}
-
-function startCharging() {
-  if (gameState !== 'playing' || !player.alive) return;
-  if (cooldowns.e.cur > 0 || player.eCharging) return;
-  player.eCharging = true;
-  player.eChargeStart = now_ms();
-}
-
-function releaseCharge() {
-  if (!player.eCharging) return;
-  player.eCharging = false;
-  if (gameState === 'playing' && player.alive) {
-    let targetX, targetY;
-    if (isMobile && mobileInput.eActive) {
-      const dirLen = Math.hypot(mobileInput.eDirX, mobileInput.eDirY);
-      if (dirLen > 0.3) { targetX = player.x + mobileInput.eDirX * 500; targetY = player.y + mobileInput.eDirY * 500; }
-      else { targetX = mouse.x; targetY = mouse.y; }
-    } else { targetX = mouse.x; targetY = mouse.y; }
-    castBurst(player, 'player', targetX, targetY);
-  }
-}
-
-function applyEffectsFromBurst(target, sourceX, sourceY, owner) {
-  const dx = target.x - sourceX, dy = target.y - sourceY;
-  const len = Math.hypot(dx, dy) || 1;
-  const casterClass = owner === 'player' ? selectedClassKey : bot.classKey;
-  const isPaladinCast = casterClass === 'paladin';
-  const power = isPaladinCast ? 1300 : 780;
-  const slowDur = isPaladinCast ? 4500 : 3000;
-  target.knockbackVx = (dx / len) * power;
-  target.knockbackVy = (dy / len) * power;
-  target.knockbackDisplayUntil = now_ms() + 500;
-  target.slowUntil = now_ms() + slowDur;
-  target.slowFactor = isPaladinCast ? 0.3 : 0.45;
-}
-
-function spawnDamageText(x, y, text, color = '#f2b544') {
-  if (!showDamageText) return;
-  floatingTexts.push({ x: x + (Math.random() - 0.5) * 20, y: y - 10, text: text, color: color, life: 0.8, maxLife: 0.8 });
-}
-
-function spawnDeathParticles(x, y, color) {
-  for (let i = 0; i < 35; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const speed = 100 + Math.random() * 320;
-    particles.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, radius: 2 + Math.random() * 4, color: color, life: 0.6 + Math.random() * 0.5, maxLife: 1.0 });
-  }
-}
-
-function applyDamage(target, dmg, sourceOwner) {
-  if (!target.alive || roundEnding) return;
-  if (target.shieldStacks > 0) {
-    target.shieldStacks--;
-    spawnDamageText(target.x, target.y - target.radius, 'BLOCKED!', '#38bdf8');
-    spawnDeathParticles(target.x, target.y, '#38bdf8');
-    playSfx('block');
-    return;
-  }
-  target.hp -= dmg;
-  target.hitFlash = 0.15;
-  playSfx('hit');
-  spawnDamageText(target.x, target.y - target.radius, '-' + dmg.toFixed(1));
-  if (target.hp <= 0) {
-    target.hp = 0;
-    target.alive = false;
-    roundEnding = true;
-    if (sourceOwner === 'player') {
-      lastResultKind = 'win';
-      playSfx('victory');
-      showStatus(I18N[currentLang].statusVictory, '#4fd6c4');
-      setTimeout(() => showResultScreen(I18N[currentLang].resultVictoryTitle, I18N[currentLang].resultVictoryText, 'win'), 1400);
-    } else {
-      lastResultKind = 'lose';
-      playSfx('defeat');
-      showStatus(I18N[currentLang].statusDefeat, '#e0554f');
-      setTimeout(() => showResultScreen(I18N[currentLang].resultDefeatTitle, I18N[currentLang].resultDefeatText, 'lose'), 1400);
+      modal.classList.remove('hidden');
     }
-  }
-}
 
-function currentMoveSpeed(entity) {
-  const cls = CLASSES[entity.classKey];
-  const slowed = now_ms() < entity.slowUntil;
-  return cls.moveSpeed * (slowed ? entity.slowFactor : 1);
-}
+    document.getElementById('closeModalBtn').addEventListener('click', () => { document.getElementById('skillDetailModal').classList.add('hidden'); });
+    document.getElementById('closeModalBtn').addEventListener('touchstart', (e) => { e.preventDefault(); document.getElementById('skillDetailModal').classList.add('hidden'); }, { passive: false });
 
-function applyKnockback(entity, dt) {
-  if (Math.abs(entity.knockbackVx) > 1 || Math.abs(entity.knockbackVy) > 1) {
-    entity.x += entity.knockbackVx * dt;
-    entity.y += entity.knockbackVy * dt;
-    const decay = Math.exp(-8 * dt);
-    entity.knockbackVx *= decay;
-    entity.knockbackVy *= decay;
-  } else {
-    entity.knockbackVx = 0; entity.knockbackVy = 0;
-  }
-}
+    applyClassAccent();
 
-let lastTime = performance.now();
-function loop(now) {
-  const dt = Math.min((now - lastTime) / 1000, 0.05);
-  lastTime = now;
-  update(dt);
-  render();
-  requestAnimationFrame(loop);
-}
+    const DIFFICULTY = {
+      easy: { speedMult: 0.8, shootMin: 1.25, shootMax: 1.75, dmgMult: 1.00, qCooldown: 5.5, eCooldown: 9.0, homing: 0.38 },
+      normal: { speedMult: 1.0, shootMin: 0.95, shootMax: 1.35, dmgMult: 1.18, qCooldown: 3.8, eCooldown: 6.2, homing: 0.72 },
+      hard: { speedMult: 1.4, shootMin: 0.50, shootMax: 0.80, dmgMult: 1.45, qCooldown: 2.1, eCooldown: 3.8, homing: 1.05 },
+      nightmare: { speedMult: 1.8, shootMin: 0.40, shootMax: 0.70, dmgMult: 1.9, qCooldown: 1.0, eCooldown: 2.3, homing: 1.4 }
+    };
+    let difficultyKey = 'normal';
+    let currentDifficulty = DIFFICULTY[difficultyKey];
+    let botShootTimer = 0, statusTimer = 0, gameState = 'lobby';
 
-function updateEntityRapidShots(entity, targetX, targetY, owner, dt) {
-  if (entity.alive && entity.rapidShotsLeft > 0) {
-    entity.rapidShotTimer -= dt;
-    if (entity.rapidShotTimer <= 0) {
-      fireProjectile(entity, targetX, targetY, entity.color, 5, owner, 950, 0, 'blade');
-      entity.rapidShotsLeft--;
-      entity.rapidShotTimer = 0.05;
+    const screenMain = document.getElementById('screenMain');
+    const screenClassSelect = document.getElementById('screenClassSelect');
+    const screenSettings = document.getElementById('screenSettings');
+    const screenDifficulty = document.getElementById('screenDifficulty');
+    const screenPause = document.getElementById('screenPause');
+    const screenResult = document.getElementById('screenResult');
+    const resultTitleEl = document.getElementById('resultTitle');
+    const resultTextEl = document.getElementById('resultText');
+
+    function hideAllScreens() {
+      screenMain.classList.add('hidden');
+      screenClassSelect.classList.add('hidden');
+      screenSettings.classList.add('hidden');
+      screenDifficulty.classList.add('hidden');
+      screenPause.classList.add('hidden');
+      screenResult.classList.add('hidden');
     }
-  }
-}
-
-function update(dt) {
-  if (gameState !== 'playing') return;
-  for (const k in cooldowns) cooldowns[k].cur = Math.max(0, cooldowns[k].cur - dt);
-  if (statusTimer > 0) { statusTimer -= dt; if (statusTimer <= 0) document.getElementById('status').classList.remove('show'); }
-  if (roundEnding) return;
-
-  if (isMobile && mobileInput.attackActive && cooldowns.basic.cur <= 0) {
-    const dirLen = Math.hypot(mobileInput.attackDirX, mobileInput.attackDirY);
-    if (dirLen > 0.3) {
-      const cls = CLASSES[selectedClassKey];
-      const targetX = player.x + mobileInput.attackDirX * 500;
-      const targetY = player.y + mobileInput.attackDirY * 500;
-      fireProjectile(player, targetX, targetY, cls.color, cls.basicDmg, 'player', cls.basicSpeed, cls.basicHoming);
-      cooldowns.basic.cur = cooldowns.basic.max;
+    function hidePreviewModal() {
+      previewMode = false;
+      document.body.classList.remove('preview-mode');
+      if (typeof uiPreviewModal !== 'undefined') uiPreviewModal.classList.add('hidden');
     }
-  }
-
-  updateEntityRapidShots(player, mouse.x, mouse.y, 'player', dt);
-  updateEntityRapidShots(bot, player.x, player.y, 'bot', dt);
-  if (startLabelTimer > 0) startLabelTimer = Math.max(0, startLabelTimer - dt);
-
-  for (let i = delayedMeteors.length - 1; i >= 0; i--) {
-    const dm = delayedMeteors[i];
-    dm.delay -= dt;
-    if (dm.delay <= 0) {
-      auras.push({ x: dm.x, y: dm.y, r: 0, maxR: dm.radius, dmg: dm.dmg, life: 0.35, dealt: false, owner: dm.owner });
-      delayedMeteors.splice(i, 1);
+    function showMainScreen() { hidePreviewModal(); gameState = 'lobby'; hideAllScreens(); screenMain.classList.remove('hidden'); document.body.classList.remove('show-hud'); }
+    function showClassSelectScreen() { hidePreviewModal(); hideAllScreens(); screenClassSelect.classList.remove('hidden'); document.body.classList.remove('show-hud'); }
+    function showSettingsScreen() { hidePreviewModal(); hideAllScreens(); screenSettings.classList.remove('hidden'); document.body.classList.remove('show-hud'); }
+    function showDifficultyScreen() { hidePreviewModal(); gameState = 'lobby'; hideAllScreens(); screenDifficulty.classList.remove('hidden'); document.body.classList.remove('show-hud'); }
+    function pauseGame() { if (gameState !== 'playing') return; hidePreviewModal(); gameState = 'paused'; hideAllScreens(); screenPause.classList.remove('hidden'); }
+    function resumeGame() { if (gameState !== 'paused') return; hidePreviewModal(); gameState = 'playing'; hideAllScreens(); lastTime = performance.now(); document.body.classList.add('show-hud'); }
+    function showResultScreen(title, text, resultClass) {
+      hidePreviewModal();
+      gameState = 'lobby';
+      resultTitleEl.textContent = title;
+      resultTitleEl.style.color = resultClass === 'win' ? 'var(--accent-player)' : 'var(--accent-enemy)';
+      resultTextEl.textContent = text;
+      resultTextEl.className = 'lobby-result' + (resultClass ? ' ' + resultClass : '');
+      hideAllScreens();
+      screenResult.classList.remove('hidden');
     }
-  }
 
-  if (player.alive) {
-    const cls = CLASSES[selectedClassKey];
-    if (isMobile && mobileInput.attackActive) {
-      const dirLen = Math.hypot(mobileInput.attackDirX, mobileInput.attackDirY);
-      if (dirLen > 0.1) player.angle = Math.atan2(mobileInput.attackDirY, mobileInput.attackDirX);
-    } else if (isMobile && mobileInput.qActive) {
-      const dirLen = Math.hypot(mobileInput.qDirX, mobileInput.qDirY);
-      if (dirLen > 0.1) player.angle = Math.atan2(mobileInput.qDirY, mobileInput.qDirX);
-    } else if (isMobile && mobileInput.eActive) {
-      const dirLen = Math.hypot(mobileInput.eDirX, mobileInput.eDirY);
-      if (dirLen > 0.1) player.angle = Math.atan2(mobileInput.eDirY, mobileInput.eDirX);
-    } else {
-      player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+    function addClickHandler(element, handler) {
+      element.addEventListener('click', () => { unlockAudio(); playSfx('buttonClick'); handler(); });
+      element.addEventListener('touchstart', (e) => { e.preventDefault(); unlockAudio(); playSfx('buttonClick'); handler(); }, { passive: false });
     }
-    const isDashing = now_ms() < player.dashUntil;
-    const speed = currentMoveSpeed(player);
-    if (isDashing) { player.x += player.dashVx * dt; player.y += player.dashVy * dt; }
-    else {
-      let dx = 0, dy = 0;
-      if (keys['w']) dy -= 1;
-      if (keys['s']) dy += 1;
-      if (keys['a']) dx -= 1;
-      if (keys['d']) dx += 1;
-      if (Math.abs(mobileInput.moveX) > 0.1 || Math.abs(mobileInput.moveY) > 0.1) { dx += mobileInput.moveX; dy += mobileInput.moveY; }
-      const len = Math.hypot(dx, dy);
-      if (len > 0) { player.x += (dx / len) * speed * dt; player.y += (dy / len) * speed * dt; }
-    }
-    applyKnockback(player, dt);
-    player.x = Math.max(20, Math.min(canvas.width - 20, player.x));
-    player.y = Math.max(20, Math.min(canvas.height - 20, player.y));
-    if (!isMobile && mouse.down && cooldowns.basic.cur <= 0) {
-      fireProjectile(player, mouse.x, mouse.y, cls.color, cls.basicDmg, 'player', cls.basicSpeed, cls.basicHoming);
-      cooldowns.basic.cur = cooldowns.basic.max;
-    }
-    if (!isMobile && keys['q'] && cooldowns.q.cur <= 0 && !isDashing) useQSkill(player, mouse.x, mouse.y, 'player');
-    if (player.hitFlash > 0) player.hitFlash -= dt;
-  }
 
-  if (bot.alive && player.alive) {
-    const botCls = CLASSES[bot.classKey];
-    bot.angle = Math.atan2(player.y - bot.y, player.x - bot.x);
-    const d = dist(bot.x, bot.y, player.x, player.y);
-    const dx = bot.x - player.x, dy = bot.y - player.y;
-    const len = Math.hypot(dx, dy) || 1;
-    const isDashing = now_ms() < bot.dashUntil;
-    const botSpeedMult = currentDifficulty.speedMult * (currentMoveSpeed(bot) / 250);
-    if (bot.openingDashLockTimer > 0) bot.openingDashLockTimer -= dt;
-    if (isDashing) { bot.x += bot.dashVx * dt; bot.y += bot.dashVy * dt; }
-    else {
-      const margin = 35;
-      let wallVx = 0, wallVy = 0;
-      if (bot.x < margin) wallVx = 1;
-      else if (bot.x > canvas.width - margin) wallVx = -1;
-      if (bot.y < margin) wallVy = 1;
-      else if (bot.y > canvas.height - margin) wallVy = -1;
-      if (wallVx !== 0 || wallVy !== 0) {
-        const wallLen = Math.hypot(wallVx, wallVy) || 1;
-        bot.x += (wallVx / wallLen) * 220 * botSpeedMult * dt;
-        bot.y += (wallVy / wallLen) * 220 * botSpeedMult * dt;
-      } else if (bot.openingTimer > 0) {
-        bot.openingTimer -= dt;
-        const flankVx = -(dx / len) * 0.5;
-        const flankVy = bot.openingDirY * 0.866;
-        const flankLen = Math.hypot(flankVx, flankVy) || 1;
-        bot.x += (flankVx / flankLen) * 200 * botSpeedMult * dt;
-        bot.y += (flankVy / flankLen) * 200 * botSpeedMult * dt;
+    addClickHandler(document.getElementById('mainStartBtn'), showDifficultyScreen);
+    addClickHandler(document.getElementById('mainClassBtn'), showClassSelectScreen);
+    addClickHandler(document.getElementById('closeClassBtn'), showMainScreen);
+    addClickHandler(document.getElementById('mainSettingsBtn'), showSettingsScreen);
+    addClickHandler(document.getElementById('backToLobbyBtn'), showMainScreen);
+    addClickHandler(document.getElementById('closeSettingsBtn'), () => {
+      if (gameState === 'paused') { screenPause.classList.remove('hidden'); screenSettings.classList.add('hidden'); }
+      else showMainScreen();
+    });
+
+    const toggleDamageTextBtn = document.getElementById('toggleDamageTextBtn');
+    addClickHandler(toggleDamageTextBtn, () => {
+      showDamageText = !showDamageText;
+      const t = I18N[currentLang];
+      toggleDamageTextBtn.textContent = showDamageText ? t.toggleOn : t.toggleOff;
+      toggleDamageTextBtn.classList.toggle('off', !showDamageText);
+    });
+
+    const sfxVolumeSlider = document.getElementById('sfxVolumeSlider');
+    const sfxVolumeValue = document.getElementById('soundVolumeValue');
+    const uiScaleSlider = document.getElementById('uiScaleSlider');
+    const uiScaleValue = document.getElementById('uiScaleValue');
+    let previewMode = false;
+    function updateSfxDisplay() { sfxVolume = parseFloat(sfxVolumeSlider.value); localStorage.setItem('pvpProtoSfxVol', sfxVolume.toString()); sfxVolumeValue.textContent = `${Math.round(sfxVolume * 100)}%`; }
+    function updateUiScaleDisplay() { uiScale = parseFloat(uiScaleSlider.value); localStorage.setItem('pvpProtoUiScale', uiScale.toString()); uiScaleValue.textContent = `${Math.round(uiScale * 100)}%`; document.documentElement.style.setProperty('--ui-scale', uiScale.toString()); }
+    function updatePreviewHud() {
+      const pHpNorm = Math.max(0, player.hp / player.maxHp);
+      const eHpNorm = Math.max(0, bot.hp / bot.maxHp);
+      document.getElementById('playerHpFill').style.width = `${pHpNorm * 100}%`;
+      document.getElementById('enemyHpFill').style.width = `${eHpNorm * 100}%`;
+      document.getElementById('playerHpText').textContent = `${player.hp.toFixed(1)} / ${player.maxHp.toFixed(1)}`;
+      document.getElementById('enemyHpText').textContent = `${bot.hp.toFixed(1)} / ${bot.maxHp.toFixed(1)}`;
+      document.getElementById('cdBasic').style.height = `${(cooldowns.basic.cur / cooldowns.basic.max) * 100}%`;
+      document.getElementById('cdQ').style.height = `${(cooldowns.q.cur / cooldowns.q.max) * 100}%`;
+      document.getElementById('cdE').style.height = `${(cooldowns.e.cur / cooldowns.e.max) * 100}%`;
+      document.getElementById('cdTextBasic').textContent = cooldowns.basic.cur > 0 ? `${cooldowns.basic.cur.toFixed(1)}s` : '';
+      document.getElementById('cdTextQ').textContent = cooldowns.q.cur > 0 ? `${cooldowns.q.cur.toFixed(1)}s` : '';
+      document.getElementById('cdTextE').textContent = cooldowns.e.cur > 0 ? `${cooldowns.e.cur.toFixed(1)}s` : '';
+      document.getElementById('slotQ').classList.toggle('charging', player.eCharging);
+      let chips = '';
+      const nowT = now_ms();
+      if (player.shieldStacks > 0) chips += `<span class="effect-chip shield">SHIELD (${player.shieldStacks})</span>`;
+      if (nowT < player.slowUntil) chips += `<span class="effect-chip slow">SLOW</span>`;
+      if (nowT < player.knockbackDisplayUntil) chips += `<span class="effect-chip knockback">KNOCKBACK</span>`;
+      document.getElementById('playerEffects').innerHTML = chips;
+    }
+    function enterPreviewMode() { previewMode = true; gameState = 'preview'; hideAllScreens(); document.body.classList.add('show-hud', 'preview-mode'); updatePreviewHud(); uiPreviewModal.classList.remove('hidden'); }
+    function exitPreviewMode() { hidePreviewModal(); gameState = 'lobby'; document.body.classList.remove('show-hud'); showSettingsScreen(); }
+
+    const openUiPreviewBtn = document.getElementById('openUiPreviewBtn');
+    const uiPreviewModal = document.getElementById('uiPreviewModal');
+    const closeUiPreviewBtn = document.getElementById('closeUiPreviewBtn');
+
+    addClickHandler(openUiPreviewBtn, enterPreviewMode);
+    addClickHandler(closeUiPreviewBtn, exitPreviewMode);
+
+    uiPreviewModal.addEventListener('click', (e) => { if (e.target === uiPreviewModal) exitPreviewMode(); });
+    sfxVolumeSlider.value = sfxVolume.toString();
+    uiScaleSlider.value = uiScale.toString();
+    sfxVolumeSlider.addEventListener('input', updateSfxDisplay);
+    uiScaleSlider.addEventListener('input', updateUiScaleDisplay);
+    updateSfxDisplay();
+    updateUiScaleDisplay();
+
+    function unlockAudio() { if (audioCtx.state === 'suspended') audioCtx.resume(); }
+    document.body.addEventListener('pointerdown', unlockAudio, { once: true });
+    document.body.addEventListener('keydown', unlockAudio, { once: true });
+
+    document.querySelectorAll('button').forEach(element => {
+      if (!element.closest('.class-card')) {
+        element.addEventListener('mouseenter', () => { unlockAudio(); playSfx('buttonHover'); });
+      }
+    });
+
+    addClickHandler(document.getElementById('confirmStartBtn'), startMatch);
+    addClickHandler(document.getElementById('resumeBtn'), resumeGame);
+    addClickHandler(document.getElementById('pauseToLobbyBtn'), showMainScreen);
+    addClickHandler(document.getElementById('retryBtn'), showDifficultyScreen);
+    addClickHandler(document.getElementById('toLobbyBtn'), showMainScreen);
+
+    document.querySelectorAll('.diff-btn').forEach(btn => {
+      addClickHandler(btn, () => {
+        document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        difficultyKey = btn.dataset.diff;
+      });
+    });
+
+    function startMatch() {
+      hidePreviewModal();
+      currentDifficulty = DIFFICULTY[difficultyKey];
+      resetRound();
+      previewMode = false;
+      gameState = 'playing';
+      hideAllScreens();
+      document.body.classList.add('show-hud');
+      lastTime = performance.now();
+      startLabelTimer = 2.0;
+      startLabelText = currentLang === 'ko' ? '나' : 'Me';
+      playSfx('start');
+    }
+
+    function showStatus(text, color) {
+      const el = document.getElementById('status');
+      el.textContent = text;
+      el.style.color = color || '#e8edf2';
+      el.classList.add('show');
+      statusTimer = 1.4;
+    }
+
+    function dist(ax, ay, bx, by) { return Math.hypot(ax - bx, ay - by); }
+    function now_ms() { return performance.now(); }
+
+    function resetEntityState(e, x, y, isPlayer) {
+      let classKey = selectedClassKey;
+      if (!isPlayer) {
+        const classKeys = Object.keys(CLASSES);
+        classKey = classKeys[Math.floor(Math.random() * classKeys.length)];
+      }
+      const cls = CLASSES[classKey];
+      e.classKey = classKey;
+      e.maxHp = cls.maxHp;
+      e.hp = cls.maxHp;
+      e.color = cls.color;
+      e.glow = cls.glow;
+      if (isPlayer) { cooldowns.basic.max = cls.basicCd; cooldowns.q.max = cls.qCd; cooldowns.e.max = cls.eCd; }
+      else {
+        const enemyLabel = `${I18N[currentLang].enemyTagPrefix}${getLocalizedClassName(classKey)})`;
+        document.getElementById('enemyTag').textContent = enemyLabel;
+      }
+      e.alive = true;
+      e.x = x; e.y = y;
+      e.angle = 0;
+      e.dashUntil = 0; e.dashVx = 0; e.dashVy = 0; e.hitFlash = 0;
+      e.slowUntil = 0; e.slowFactor = 1;
+      e.knockbackVx = 0; e.knockbackVy = 0; e.knockbackDisplayUntil = 0;
+      e.shieldStacks = 0;
+      e.eCharging = false; e.eChargeStart = 0;
+      e.qCd = 0; e.eCd = 0;
+      e.rapidShotsLeft = 0; e.rapidShotTimer = 0;
+      e.moveDirTimer = 0; e.moveDirAngle = 0;
+      e.openingTimer = 2.0 + Math.random() * 1.5;
+      e.openingDirY = Math.random() < 0.5 ? -1 : 1;
+      e.openingDashLockTimer = 2.5 + Math.random() * 1.0;
+    }
+
+    function resetRound() {
+      resetEntityState(player, canvas.width * 0.12, canvas.height * 0.5, true);
+      resetEntityState(bot, canvas.width * 0.88, canvas.height * 0.5, false);
+      projectiles.length = 0; auras.length = 0; delayedMeteors.length = 0; floatingTexts.length = 0; particles.length = 0;
+      botShootTimer = 0.8;
+      cooldowns.basic.cur = 0; cooldowns.q.cur = 0; cooldowns.e.cur = 0;
+      roundEnding = false;
+    }
+
+    function fireProjectile(from, tx, ty, color, dmg, owner, speed, homing, type = 'normal') {
+      const dx = tx - from.x, dy = ty - from.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const radius = type === 'blade' ? 4 : 6;
+      const life = type === 'blade' ? 1.2 : 1.8;
+      projectiles.push({ x: from.x, y: from.y, vx: (dx / len) * speed, vy: (dy / len) * speed, owner, radius, color, dmg, life, homing: homing || 0, type: type });
+      if (owner === 'player') playSfx('shoot');
+      else playSfx('enemyShoot');
+    }
+
+    function useQSkill(caster, targetX, targetY, owner) {
+      const cls = CLASSES[caster.classKey];
+      const dx = targetX - caster.x, dy = targetY - caster.y;
+      const len = Math.hypot(dx, dy) || 1;
+      if (caster.classKey === 'mage') {
+        const blinkDist = Math.min(len, 300);
+        caster.x += (dx / len) * blinkDist;
+        caster.y += (dy / len) * blinkDist;
+        caster.x = Math.max(20, Math.min(canvas.width - 20, caster.x));
+        caster.y = Math.max(20, Math.min(canvas.height - 20, caster.y));
+        spawnDeathParticles(caster.x, caster.y, cls.color);
+      } else if (caster.classKey === 'assassin') {
+        caster.x += (dx / len) * 260;
+        caster.y += (dy / len) * 260;
+        caster.x = Math.max(20, Math.min(canvas.width - 20, caster.x));
+        caster.y = Math.max(20, Math.min(canvas.height - 20, caster.y));
+        spawnDeathParticles(caster.x, caster.y, cls.color);
       } else {
-        bot.moveDirTimer -= dt;
-        if (bot.moveDirTimer <= 0) {
-          bot.moveDirTimer = 0.4 + Math.random() * 0.7;
-          bot.moveDirAngle = (Math.random() - 0.5) * (Math.PI * 0.8);
-        }
-        let moveX = 0, moveY = 0;
-        if (d < 220) { moveX = (dx / len); moveY = (dy / len); }
-        else if (d > 450) { moveX = -(dx / len); moveY = -(dy / len); }
-        else {
-          const perpX = -dy / len;
-          const perpY = dx / len;
-          const cos = Math.cos(bot.moveDirAngle);
-          const sin = Math.sin(bot.moveDirAngle);
-          moveX = perpX * cos - perpY * sin;
-          moveY = perpX * sin + perpY * cos;
-        }
-        bot.x += moveX * 180 * botSpeedMult * dt;
-        bot.y += moveY * 180 * botSpeedMult * dt;
+        const dashSpeed = caster.classKey === 'paladin' ? 1400 : 1700;
+        caster.dashVx = (dx / len) * dashSpeed;
+        caster.dashVy = (dy / len) * dashSpeed;
+        caster.dashUntil = now_ms() + 200;
+      }
+      if (owner === 'player') { cooldowns.q.cur = cooldowns.q.max; playSfx('dash'); }
+      else caster.qCd = currentDifficulty.qCooldown;
+    }
+
+    function castBurst(caster, owner, targetX, targetY) {
+      if (caster.classKey === 'mage') delayedMeteors.push({ x: targetX, y: targetY, delay: 0.7, maxDelay: 0.7, radius: 120, dmg: 28, owner });
+      else if (caster.classKey === 'assassin') { caster.rapidShotsLeft = 9; caster.rapidShotTimer = 0; }
+      else if (caster.classKey === 'paladin') { auras.push({ x: caster.x, y: caster.y, r: 0, maxR: 110, dmg: 26, life: 0.35, dealt: false, owner }); caster.shieldStacks = 2; }
+      else auras.push({ x: caster.x, y: caster.y, r: 0, maxR: 210, dmg: 24, life: 0.35, dealt: false, owner });
+      if (owner === 'player') { cooldowns.e.cur = cooldowns.e.max; playSfx('burst'); }
+      else { caster.eCd = currentDifficulty.eCooldown; playSfx('burst'); }
+    }
+
+    function startCharging() {
+      if (gameState !== 'playing' || !player.alive) return;
+      if (cooldowns.e.cur > 0 || player.eCharging || roundEnding) return;
+      player.eCharging = true;
+      player.eChargeStart = now_ms();
+      // Fresh charge, no carried-over telegraph position from a previous cast.
+      lastTelegraphX = null; lastTelegraphY = null;
+    }
+
+    function releaseCharge() {
+      if (!player.eCharging) return;
+      player.eCharging = false;
+
+      let targetX, targetY;
+
+      // 🔧 Use the EXACT point the telegraph circle was last drawn at — this guarantees the
+      // meteor lands exactly where it was shown, with zero chance of drifting from the aim
+      // line's easing/smoothing (which is a purely visual effect and previously wasn't
+      // mirrored here, causing the meteor to land slightly off from the displayed target).
+      if (lastTelegraphX !== null) {
+        targetX = lastTelegraphX;
+        targetY = lastTelegraphY;
+      } else if (hasEDir) {
+        // Last-held joystick direction this charge — matches exactly what the telegraph
+        // preview and aim line were showing.
+        targetX = player.x + lastEDirX * METEOR_AIM_RANGE;
+        targetY = player.y + lastEDirY * METEOR_AIM_RANGE;
+      } else if (mobileInput.eActive) {
+        // E stick was tapped/held but never meaningfully tilted this charge — fall back to
+        // the player's current facing angle, still originating from the player's own position.
+        targetX = player.x + Math.cos(player.angle) * METEOR_AIM_RANGE;
+        targetY = player.y + Math.sin(player.angle) * METEOR_AIM_RANGE;
+      } else if (hasRealMouseInput) {
+        targetX = mouse.x;
+        targetY = mouse.y;
+      } else {
+        // No mobile stick and no real mouse movement seen — safe default: cast where the
+        // player is currently facing rather than an unset (0,0) coordinate.
+        targetX = player.x + Math.cos(player.angle) * METEOR_AIM_RANGE;
+        targetY = player.y + Math.sin(player.angle) * METEOR_AIM_RANGE;
+      }
+
+      if (gameState === 'playing' && player.alive) {
+        castBurst(player, 'player', targetX, targetY);
+      }
+
+      // Reset so the next charge starts with no carried-over aim.
+      lastEDirX = 0; lastEDirY = 0; hasEDir = false;
+      lastTelegraphX = null; lastTelegraphY = null;
+    }
+
+    function applyEffectsFromBurst(target, sourceX, sourceY, owner) {
+      const dx = target.x - sourceX, dy = target.y - sourceY;
+      const len = Math.hypot(dx, dy) || 1;
+      const casterClass = owner === 'player' ? selectedClassKey : bot.classKey;
+      const isPaladinCast = casterClass === 'paladin';
+      const power = isPaladinCast ? 1300 : 780;
+      const slowDur = isPaladinCast ? 4500 : 3000;
+      target.knockbackVx = (dx / len) * power;
+      target.knockbackVy = (dy / len) * power;
+      target.knockbackDisplayUntil = now_ms() + 500;
+      target.slowUntil = now_ms() + slowDur;
+      target.slowFactor = isPaladinCast ? 0.3 : 0.45;
+    }
+
+    function spawnDamageText(x, y, text, color = '#f2b544') {
+      if (!showDamageText) return;
+      floatingTexts.push({ x: x + (Math.random() - 0.5) * 20, y: y - 10, text: text, color: color, life: 0.8, maxLife: 0.8 });
+    }
+
+    function spawnDeathParticles(x, y, color) {
+      for (let i = 0; i < 35; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 100 + Math.random() * 320;
+        particles.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, radius: 2 + Math.random() * 4, color: color, life: 0.6 + Math.random() * 0.5, maxLife: 1.0 });
       }
     }
-    applyKnockback(bot, dt);
-    bot.x = Math.max(20, Math.min(canvas.width - 20, bot.x));
-    bot.y = Math.max(20, Math.min(canvas.height - 20, bot.y));
-    bot.qCd = Math.max(0, bot.qCd - dt);
-    bot.eCd = Math.max(0, bot.eCd - dt);
-    if (!isDashing && bot.qCd <= 0 && bot.openingDashLockTimer <= 0) {
-      if (d < 140 || d > 480) useQSkill(bot, player.x, player.y, 'bot');
+
+    function applyDamage(target, dmg, sourceOwner) {
+      if (!target.alive || roundEnding) return;
+      if (target.shieldStacks > 0) {
+        target.shieldStacks--;
+        spawnDamageText(target.x, target.y - target.radius, 'BLOCKED!', '#38bdf8');
+        spawnDeathParticles(target.x, target.y, '#38bdf8');
+        playSfx('block');
+        return;
+      }
+      target.hp -= dmg;
+      target.hitFlash = 0.15;
+      playSfx('hit');
+      spawnDamageText(target.x, target.y - target.radius, '-' + dmg.toFixed(1));
+      if (target.hp <= 0) {
+        target.hp = 0;
+        target.alive = false;
+        roundEnding = true;
+        // 🔧 Stop aiming the instant the round ends — no more charging/telegraph, even if
+        // a charge was already in progress when the killing blow landed.
+        player.eCharging = false;
+        if (sourceOwner === 'player') {
+          lastResultKind = 'win';
+          playSfx('victory');
+          showStatus(I18N[currentLang].statusVictory, '#4fd6c4');
+          setTimeout(() => showResultScreen(I18N[currentLang].resultVictoryTitle, I18N[currentLang].resultVictoryText, 'win'), 1400);
+        } else {
+          lastResultKind = 'lose';
+          playSfx('defeat');
+          showStatus(I18N[currentLang].statusDefeat, '#e0554f');
+          setTimeout(() => showResultScreen(I18N[currentLang].resultDefeatTitle, I18N[currentLang].resultDefeatText, 'lose'), 1400);
+        }
+      }
     }
-    const botEThreshold = bot.classKey === 'mage' ? 420 : 210 * 0.85;
-    if (bot.eCd <= 0 && d < botEThreshold) castBurst(bot, 'bot', player.x, player.y);
-    botShootTimer -= dt;
-    if (botShootTimer <= 0) {
-      const homingScale = 0.3 + currentDifficulty.homing * 0.4;
-      const botHoming = botCls.basicHoming + homingScale;
-      fireProjectile(bot, player.x, player.y, botCls.color, botCls.basicDmg * currentDifficulty.dmgMult, 'bot', botCls.basicSpeed, botHoming);
-      botShootTimer = currentDifficulty.shootMin + Math.random() * (currentDifficulty.shootMax - currentDifficulty.shootMin);
+
+    function currentMoveSpeed(entity) {
+      const cls = CLASSES[entity.classKey];
+      const slowed = now_ms() < entity.slowUntil;
+      return cls.moveSpeed * (slowed ? entity.slowFactor : 1);
     }
-    if (bot.hitFlash > 0) bot.hitFlash -= dt;
-  }
 
-  for (let i = projectiles.length - 1; i >= 0; i--) {
-    const p = projectiles[i];
-    if (p.homing && player.alive) {
-      const target = p.owner === 'player' ? bot : player;
-      const desiredAngle = Math.atan2(target.y - p.y, target.x - p.x);
-      const curAngle = Math.atan2(p.vy, p.vx);
-      let diff = desiredAngle - curAngle;
-      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-      const maxTurn = p.homing * dt * 2;
-      const turn = Math.max(-maxTurn, Math.min(maxTurn, diff));
-      const newAngle = curAngle + turn;
-      const speed = Math.hypot(p.vx, p.vy);
-      p.vx = Math.cos(newAngle) * speed;
-      p.vy = Math.sin(newAngle) * speed;
+    function applyKnockback(entity, dt) {
+      if (Math.abs(entity.knockbackVx) > 1 || Math.abs(entity.knockbackVy) > 1) {
+        entity.x += entity.knockbackVx * dt;
+        entity.y += entity.knockbackVy * dt;
+        const decay = Math.exp(-8 * dt);
+        entity.knockbackVx *= decay;
+        entity.knockbackVy *= decay;
+      } else {
+        entity.knockbackVx = 0; entity.knockbackVy = 0;
+      }
     }
-    p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
-    let hit = false;
-    if (p.owner === 'player' && bot.alive && dist(p.x, p.y, bot.x, bot.y) < bot.radius + p.radius) { applyDamage(bot, p.dmg, 'player'); hit = true; }
-    if (p.owner === 'bot' && player.alive && dist(p.x, p.y, player.x, player.y) < player.radius + p.radius) { applyDamage(player, p.dmg, 'bot'); hit = true; }
-    if (hit || p.life <= 0 || p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) projectiles.splice(i, 1);
-  }
 
-  for (let i = auras.length - 1; i >= 0; i--) {
-    const a = auras[i];
-    a.r += (a.maxR / 0.25) * dt;
-    a.life -= dt;
-    if (!a.dealt) {
-      if (a.owner === 'player' && bot.alive && dist(a.x, a.y, bot.x, bot.y) < a.r) { applyDamage(bot, a.dmg, 'player'); applyEffectsFromBurst(bot, a.x, a.y, 'player'); a.dealt = true; }
-      else if (a.owner === 'bot' && player.alive && dist(a.x, a.y, player.x, player.y) < a.r) { applyDamage(player, a.dmg * currentDifficulty.dmgMult, 'bot'); applyEffectsFromBurst(player, a.x, a.y, 'bot'); a.dealt = true; }
+    let lastTime = performance.now();
+    function loop(now) {
+      const dt = Math.min((now - lastTime) / 1000, 0.05);
+      lastTime = now;
+      update(dt);
+      render(dt);
+      requestAnimationFrame(loop);
     }
-    if (a.life <= 0) auras.splice(i, 1);
-  }
 
-  for (let i = floatingTexts.length - 1; i >= 0; i--) {
-    const ft = floatingTexts[i];
-    ft.y -= 35 * dt; ft.life -= dt;
-    if (ft.life <= 0) floatingTexts.splice(i, 1);
-  }
+    function updateEntityRapidShots(entity, targetX, targetY, owner, dt) {
+      if (entity.alive && entity.rapidShotsLeft > 0) {
+        entity.rapidShotTimer -= dt;
+        if (entity.rapidShotTimer <= 0) {
+          fireProjectile(entity, targetX, targetY, entity.color, 5, owner, 950, 0, 'blade');
+          entity.rapidShotsLeft--;
+          entity.rapidShotTimer = 0.05;
+        }
+      }
+    }
 
-  for (let i = particles.length - 1; i >= 0; i--) {
-    const pt = particles[i];
-    pt.x += pt.vx * dt; pt.y += pt.vy * dt;
-    pt.vx *= 0.94; pt.vy *= 0.94; pt.life -= dt;
-    if (pt.life <= 0) particles.splice(i, 1);
-  }
+    function update(dt) {
+      if (gameState !== 'playing') return;
+      for (const k in cooldowns) cooldowns[k].cur = Math.max(0, cooldowns[k].cur - dt);
+      if (statusTimer > 0) { statusTimer -= dt; if (statusTimer <= 0) document.getElementById('status').classList.remove('show'); }
+      if (roundEnding) return;
 
-  const pHpNorm = Math.max(0, player.hp / player.maxHp);
-  const eHpNorm = Math.max(0, bot.hp / bot.maxHp);
-  document.getElementById('playerHpFill').style.width = (pHpNorm * 100) + '%';
-  document.getElementById('enemyHpFill').style.width = (eHpNorm * 100) + '%';
-  document.getElementById('playerHpText').textContent = `${player.hp.toFixed(1)} / ${player.maxHp.toFixed(1)}`;
-  document.getElementById('enemyHpText').textContent = `${bot.hp.toFixed(1)} / ${bot.maxHp.toFixed(1)}`;
-  document.getElementById('cdBasic').style.height = (cooldowns.basic.cur / cooldowns.basic.max * 100) + '%';
-  document.getElementById('cdQ').style.height = (cooldowns.q.cur / cooldowns.q.max * 100) + '%';
-  document.getElementById('cdE').style.height = (cooldowns.e.cur / cooldowns.e.max * 100) + '%';
-  document.getElementById('cdTextBasic').textContent = cooldowns.basic.cur > 0 ? `${cooldowns.basic.cur.toFixed(1)}s` : '';
-  document.getElementById('cdTextQ').textContent = cooldowns.q.cur > 0 ? `${cooldowns.q.cur.toFixed(1)}s` : '';
-  document.getElementById('cdTextE').textContent = cooldowns.e.cur > 0 ? `${cooldowns.e.cur.toFixed(1)}s` : '';
-  document.getElementById('slotE').classList.toggle('charging', player.eCharging);
+      if (mobileInput.attackActive && cooldowns.basic.cur <= 0) {
+        const dirLen = Math.hypot(mobileInput.attackDirX, mobileInput.attackDirY);
+        if (dirLen > 0.3) {
+          const cls = CLASSES[selectedClassKey];
+          const targetX = player.x + mobileInput.attackDirX * MOBILE_AIM_LINE_RANGE;
+          const targetY = player.y + mobileInput.attackDirY * MOBILE_AIM_LINE_RANGE;
+          fireProjectile(player, targetX, targetY, cls.color, cls.basicDmg, 'player', cls.basicSpeed, cls.basicHoming);
+          cooldowns.basic.cur = cooldowns.basic.max;
+        }
+      }
 
-  let chips = '';
-  const nowT = now_ms();
-  if (player.shieldStacks > 0) chips += `<span class="effect-chip shield">SHIELD (${player.shieldStacks})</span>`;
-  if (nowT < player.slowUntil) {
-    const remain = ((player.slowUntil - nowT) / 1000).toFixed(1);
-    chips += `<span class="effect-chip slow">SLOW ${remain}s</span>`;
-  }
-  if (nowT < player.knockbackDisplayUntil) chips += `<span class="effect-chip knockback">KNOCKBACK</span>`;
-  document.getElementById('playerEffects').innerHTML = chips;
+      // Use player.angle (driven by the joystick on mobile, by the mouse on desktop)
+      // rather than raw mouse coordinates, so rapid-shot aim never depends on touch position.
+      const rapidAimX = player.x + Math.cos(player.angle) * 1000;
+      const rapidAimY = player.y + Math.sin(player.angle) * 1000;
+      updateEntityRapidShots(player, rapidAimX, rapidAimY, 'player', dt);
+      updateEntityRapidShots(bot, player.x, player.y, 'bot', dt);
+      if (startLabelTimer > 0) startLabelTimer = Math.max(0, startLabelTimer - dt);
 
-  const skillbarEl = document.getElementById('skillbar');
-  const skillbarTop = canvas.height - 150;
-  const skillbarBottom = canvas.height - 20;
-  const playerInSkillbar = player.alive && player.y > skillbarTop && player.y < skillbarBottom;
-  const botInSkillbar = bot.alive && bot.y > skillbarTop && bot.y < skillbarBottom;
-  skillbarEl.style.opacity = (playerInSkillbar || botInSkillbar) ? '0.35' : '1';
-}
+      for (let i = delayedMeteors.length - 1; i >= 0; i--) {
+        const dm = delayedMeteors[i];
+        dm.delay -= dt;
+        if (dm.delay <= 0) {
+          auras.push({ x: dm.x, y: dm.y, r: 0, maxR: dm.radius, dmg: dm.dmg, life: 0.35, dealt: false, owner: dm.owner });
+          delayedMeteors.splice(i, 1);
+        }
+      }
 
-function render() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (gameState === 'lobby' && !previewMode) return;
-  ctx.strokeStyle = '#1c2530';
-  ctx.lineWidth = 1;
-  const gridSize = 48;
-  for (let x = 0; x < canvas.width; x += gridSize) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
-  for (let y = 0; y < canvas.height; y += gridSize) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
-  if (!previewMode) {
-    if (player.alive && isMobile) {
-      let aimX = 0, aimY = 0, showAim = false;
-      if (mobileInput.attackActive) { aimX = mobileInput.attackDirX; aimY = mobileInput.attackDirY; showAim = true; }
-      else if (mobileInput.qActive) { aimX = mobileInput.qDirX; aimY = mobileInput.qDirY; showAim = true; }
-      else if (mobileInput.eActive) { aimX = mobileInput.eDirX; aimY = mobileInput.eDirY; showAim = true; }
-      if (showAim) {
-        const dirLen = Math.hypot(aimX, aimY);
-        if (dirLen > 0.1) {
-          const targetX = player.x + aimX * 500;
-          const targetY = player.y + aimY * 500;
-          ctx.strokeStyle = player.color + '50';
-          ctx.setLineDash([4, 6]);
+      if (player.alive) {
+        const cls = CLASSES[selectedClassKey];
+        if (mobileInput.attackActive) {
+          const dirLen = Math.hypot(mobileInput.attackDirX, mobileInput.attackDirY);
+          if (dirLen > 0.1) player.angle = Math.atan2(mobileInput.attackDirY, mobileInput.attackDirX);
+        } else if (mobileInput.qActive) {
+          const dirLen = Math.hypot(mobileInput.qDirX, mobileInput.qDirY);
+          if (dirLen > 0.1) player.angle = Math.atan2(mobileInput.qDirY, mobileInput.qDirX);
+        } else if (mobileInput.eActive) {
+          const dirLen = Math.hypot(mobileInput.eDirX, mobileInput.eDirY);
+          if (dirLen > 0.1) player.angle = Math.atan2(mobileInput.eDirY, mobileInput.eDirX);
+        } else if (hasRealMouseInput) {
+          // Desktop only: follow mouse
+          player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+        }
+        const isDashing = now_ms() < player.dashUntil;
+        const speed = currentMoveSpeed(player);
+        if (isDashing) { player.x += player.dashVx * dt; player.y += player.dashVy * dt; }
+        else {
+          let dx = 0, dy = 0;
+          if (keys['w']) dy -= 1;
+          if (keys['s']) dy += 1;
+          if (keys['a']) dx -= 1;
+          if (keys['d']) dx += 1;
+          if (Math.abs(mobileInput.moveX) > 0.1 || Math.abs(mobileInput.moveY) > 0.1) { dx += mobileInput.moveX; dy += mobileInput.moveY; }
+          const len = Math.hypot(dx, dy);
+          if (len > 0) { player.x += (dx / len) * speed * dt; player.y += (dy / len) * speed * dt; }
+        }
+        applyKnockback(player, dt);
+        player.x = Math.max(20, Math.min(canvas.width - 20, player.x));
+        player.y = Math.max(20, Math.min(canvas.height - 20, player.y));
+        if (hasRealMouseInput && mouse.down && cooldowns.basic.cur <= 0) {
+          fireProjectile(player, mouse.x, mouse.y, cls.color, cls.basicDmg, 'player', cls.basicSpeed, cls.basicHoming);
+          cooldowns.basic.cur = cooldowns.basic.max;
+        }
+        if (hasRealMouseInput && keys['q'] && cooldowns.q.cur <= 0 && !isDashing) useQSkill(player, mouse.x, mouse.y, 'player');
+        if (player.hitFlash > 0) player.hitFlash -= dt;
+      }
+
+      if (bot.alive && player.alive) {
+        const botCls = CLASSES[bot.classKey];
+        bot.angle = Math.atan2(player.y - bot.y, player.x - bot.x);
+        const d = dist(bot.x, bot.y, player.x, player.y);
+        const dx = bot.x - player.x, dy = bot.y - player.y;
+        const len = Math.hypot(dx, dy) || 1;
+        const isDashing = now_ms() < bot.dashUntil;
+        const botSpeedMult = currentDifficulty.speedMult * (currentMoveSpeed(bot) / 250);
+        if (bot.openingDashLockTimer > 0) bot.openingDashLockTimer -= dt;
+        if (isDashing) { bot.x += bot.dashVx * dt; bot.y += bot.dashVy * dt; }
+        else {
+          const margin = 35;
+          let wallVx = 0, wallVy = 0;
+          if (bot.x < margin) wallVx = 1;
+          else if (bot.x > canvas.width - margin) wallVx = -1;
+          if (bot.y < margin) wallVy = 1;
+          else if (bot.y > canvas.height - margin) wallVy = -1;
+          if (wallVx !== 0 || wallVy !== 0) {
+            const wallLen = Math.hypot(wallVx, wallVy) || 1;
+            bot.x += (wallVx / wallLen) * 220 * botSpeedMult * dt;
+            bot.y += (wallVy / wallLen) * 220 * botSpeedMult * dt;
+          } else if (bot.openingTimer > 0) {
+            bot.openingTimer -= dt;
+            const flankVx = -(dx / len) * 0.5;
+            const flankVy = bot.openingDirY * 0.866;
+            const flankLen = Math.hypot(flankVx, flankVy) || 1;
+            bot.x += (flankVx / flankLen) * 200 * botSpeedMult * dt;
+            bot.y += (flankVy / flankLen) * 200 * botSpeedMult * dt;
+          } else {
+            bot.moveDirTimer -= dt;
+            if (bot.moveDirTimer <= 0) {
+              bot.moveDirTimer = 0.4 + Math.random() * 0.7;
+              bot.moveDirAngle = (Math.random() - 0.5) * (Math.PI * 0.8);
+            }
+            let moveX = 0, moveY = 0;
+            if (d < 220) { moveX = (dx / len); moveY = (dy / len); }
+            else if (d > 450) { moveX = -(dx / len); moveY = -(dy / len); }
+            else {
+              const perpX = -dy / len;
+              const perpY = dx / len;
+              const cos = Math.cos(bot.moveDirAngle);
+              const sin = Math.sin(bot.moveDirAngle);
+              moveX = perpX * cos - perpY * sin;
+              moveY = perpX * sin + perpY * cos;
+            }
+            bot.x += moveX * 180 * botSpeedMult * dt;
+            bot.y += moveY * 180 * botSpeedMult * dt;
+          }
+        }
+        applyKnockback(bot, dt);
+        bot.x = Math.max(20, Math.min(canvas.width - 20, bot.x));
+        bot.y = Math.max(20, Math.min(canvas.height - 20, bot.y));
+        bot.qCd = Math.max(0, bot.qCd - dt);
+        bot.eCd = Math.max(0, bot.eCd - dt);
+        if (!isDashing && bot.qCd <= 0 && bot.openingDashLockTimer <= 0) {
+          if (d < 140 || d > 480) useQSkill(bot, player.x, player.y, 'bot');
+        }
+        const botEThreshold = bot.classKey === 'mage' ? 420 : 210 * 0.85;
+        if (bot.eCd <= 0 && d < botEThreshold) castBurst(bot, 'bot', player.x, player.y);
+        botShootTimer -= dt;
+        if (botShootTimer <= 0) {
+          const homingScale = 0.3 + currentDifficulty.homing * 0.4;
+          const botHoming = botCls.basicHoming + homingScale;
+          fireProjectile(bot, player.x, player.y, botCls.color, botCls.basicDmg * currentDifficulty.dmgMult, 'bot', botCls.basicSpeed, botHoming);
+          botShootTimer = currentDifficulty.shootMin + Math.random() * (currentDifficulty.shootMax - currentDifficulty.shootMin);
+        }
+        if (bot.hitFlash > 0) bot.hitFlash -= dt;
+      }
+
+      for (let i = projectiles.length - 1; i >= 0; i--) {
+        const p = projectiles[i];
+        if (p.homing && player.alive) {
+          const target = p.owner === 'player' ? bot : player;
+          const desiredAngle = Math.atan2(target.y - p.y, target.x - p.x);
+          const curAngle = Math.atan2(p.vy, p.vx);
+          let diff = desiredAngle - curAngle;
+          diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+          const maxTurn = p.homing * dt * 2;
+          const turn = Math.max(-maxTurn, Math.min(maxTurn, diff));
+          const newAngle = curAngle + turn;
+          const speed = Math.hypot(p.vx, p.vy);
+          p.vx = Math.cos(newAngle) * speed;
+          p.vy = Math.sin(newAngle) * speed;
+        }
+        p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
+        let hit = false;
+        if (p.owner === 'player' && bot.alive && dist(p.x, p.y, bot.x, bot.y) < bot.radius + p.radius) { applyDamage(bot, p.dmg, 'player'); hit = true; }
+        if (p.owner === 'bot' && player.alive && dist(p.x, p.y, player.x, player.y) < player.radius + p.radius) { applyDamage(player, p.dmg, 'bot'); hit = true; }
+        if (hit || p.life <= 0 || p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) projectiles.splice(i, 1);
+      }
+
+      for (let i = auras.length - 1; i >= 0; i--) {
+        const a = auras[i];
+        a.r += (a.maxR / 0.25) * dt;
+        a.life -= dt;
+        if (!a.dealt) {
+          if (a.owner === 'player' && bot.alive && dist(a.x, a.y, bot.x, bot.y) < a.r) { applyDamage(bot, a.dmg, 'player'); applyEffectsFromBurst(bot, a.x, a.y, 'player'); a.dealt = true; }
+          else if (a.owner === 'bot' && player.alive && dist(a.x, a.y, player.x, player.y) < a.r) { applyDamage(player, a.dmg * currentDifficulty.dmgMult, 'bot'); applyEffectsFromBurst(player, a.x, a.y, 'bot'); a.dealt = true; }
+        }
+        if (a.life <= 0) auras.splice(i, 1);
+      }
+
+      for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        const ft = floatingTexts[i];
+        ft.y -= 35 * dt; ft.life -= dt;
+        if (ft.life <= 0) floatingTexts.splice(i, 1);
+      }
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const pt = particles[i];
+        pt.x += pt.vx * dt; pt.y += pt.vy * dt;
+        pt.vx *= 0.94; pt.vy *= 0.94; pt.life -= dt;
+        if (pt.life <= 0) particles.splice(i, 1);
+      }
+
+      const pHpNorm = Math.max(0, player.hp / player.maxHp);
+      const eHpNorm = Math.max(0, bot.hp / bot.maxHp);
+      document.getElementById('playerHpFill').style.width = (pHpNorm * 100) + '%';
+      document.getElementById('enemyHpFill').style.width = (eHpNorm * 100) + '%';
+      document.getElementById('playerHpText').textContent = `${player.hp.toFixed(1)} / ${player.maxHp.toFixed(1)}`;
+      document.getElementById('enemyHpText').textContent = `${bot.hp.toFixed(1)} / ${bot.maxHp.toFixed(1)}`;
+      document.getElementById('cdBasic').style.height = (cooldowns.basic.cur / cooldowns.basic.max * 100) + '%';
+      document.getElementById('cdQ').style.height = (cooldowns.q.cur / cooldowns.q.max * 100) + '%';
+      document.getElementById('cdE').style.height = (cooldowns.e.cur / cooldowns.e.max * 100) + '%';
+      document.getElementById('cdTextBasic').textContent = cooldowns.basic.cur > 0 ? `${cooldowns.basic.cur.toFixed(1)}s` : '';
+      document.getElementById('cdTextQ').textContent = cooldowns.q.cur > 0 ? `${cooldowns.q.cur.toFixed(1)}s` : '';
+      document.getElementById('cdTextE').textContent = cooldowns.e.cur > 0 ? `${cooldowns.e.cur.toFixed(1)}s` : '';
+      document.getElementById('slotE').classList.toggle('charging', player.eCharging);
+
+      let chips = '';
+      const nowT = now_ms();
+      if (player.shieldStacks > 0) chips += `<span class="effect-chip shield">SHIELD (${player.shieldStacks})</span>`;
+      if (nowT < player.slowUntil) {
+        const remain = ((player.slowUntil - nowT) / 1000).toFixed(1);
+        chips += `<span class="effect-chip slow">SLOW ${remain}s</span>`;
+      }
+      if (nowT < player.knockbackDisplayUntil) chips += `<span class="effect-chip knockback">KNOCKBACK</span>`;
+      document.getElementById('playerEffects').innerHTML = chips;
+
+      const skillbarEl = document.getElementById('skillbar');
+      const skillbarTop = canvas.height - 150;
+      const skillbarBottom = canvas.height - 20;
+      const playerInSkillbar = player.alive && player.y > skillbarTop && player.y < skillbarBottom;
+      const botInSkillbar = bot.alive && bot.y > skillbarTop && bot.y < skillbarBottom;
+      skillbarEl.style.opacity = (playerInSkillbar || botInSkillbar) ? '0.35' : '1';
+    }
+
+    function render(dt) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (gameState === 'lobby' && !previewMode) return;
+      ctx.strokeStyle = '#1c2530';
+      ctx.lineWidth = 1;
+      const gridSize = 48;
+      for (let x = 0; x < canvas.width; x += gridSize) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+      for (let y = 0; y < canvas.height; y += gridSize) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+      if (!previewMode) {
+        // 🔥 Mobile aim line: only exists while a stick is actively being steered, and its
+        // on-screen length eases/smooths toward its target each frame (instead of snapping)
+        // so it reads as the line "stretching out" rather than jumping to full length.
+        let mobileAimTipX = null, mobileAimTipY = null;
+        if (player.alive && !roundEnding && (mobileInput.attackActive || mobileInput.qActive || mobileInput.eActive)) {
+          let activeKey = null, dirX = 0, dirY = 0, range = MOBILE_AIM_LINE_RANGE;
+          if (mobileInput.attackActive) { activeKey = 'attack'; dirX = mobileInput.attackDirX; dirY = mobileInput.attackDirY; }
+          else if (mobileInput.qActive) { activeKey = 'q'; dirX = mobileInput.qDirX; dirY = mobileInput.qDirY; }
+          else if (mobileInput.eActive && selectedClassKey === 'mage') {
+            activeKey = 'e';
+            range = METEOR_AIM_RANGE;
+            if (hasEDir) { dirX = lastEDirX; dirY = lastEDirY; }
+            else { dirX = Math.cos(player.angle); dirY = Math.sin(player.angle); }
+          }
+
+          const dirLen = Math.hypot(dirX, dirY);
+          if (activeKey && dirLen > 0.05) {
+            aimLineDisplay.key = activeKey;
+            const rawTargetLen = Math.min(dirLen, 1) * range;
+            // Ease-out curve: grows quickly at first and settles in near the max, which
+            // feels more like an elastic stretch than a straight linear ramp.
+            const t = rawTargetLen / range;
+            const easedLen = (1 - Math.pow(1 - t, 2)) * range;
+            const smoothing = 1 - Math.exp(-14 * dt);
+            aimLineDisplay.len += (easedLen - aimLineDisplay.len) * smoothing;
+            const ux = dirX / dirLen, uy = dirY / dirLen;
+            const lineX = player.x + ux * aimLineDisplay.len;
+            const lineY = player.y + uy * aimLineDisplay.len;
+            if (activeKey === 'e') { mobileAimTipX = lineX; mobileAimTipY = lineY; }
+            ctx.strokeStyle = player.color + '50';
+            ctx.setLineDash([4, 6]);
+            ctx.beginPath();
+            ctx.moveTo(player.x, player.y);
+            ctx.lineTo(lineX, lineY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+          } else {
+            // No stick being steered (or steered dead-center) — hide the line right away.
+            aimLineDisplay.key = null;
+            aimLineDisplay.len = 0;
+          }
+        } else {
+          // 🔧 No mobile stick is active — this covers real desktop play. We key off
+          // actual mouse movement evidence (hasRealMouseInput) rather than the isMobile
+          // flag, since isMobile has misdetected before and used to draw this line
+          // toward the unset mouse position (0,0) on touch-only devices.
+          aimLineDisplay.key = null;
+          aimLineDisplay.len = 0;
+          if (player.alive && !roundEnding && hasRealMouseInput) {
+            ctx.strokeStyle = player.color + '50';
+            ctx.setLineDash([4, 6]);
+            ctx.beginPath();
+            ctx.moveTo(player.x, player.y);
+            ctx.lineTo(mouse.x, mouse.y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
+        }
+        if (player.eCharging) {
+          const cls = CLASSES[selectedClassKey];
+          let rad = 210, centerX = player.x, centerY = player.y, showChargeCircle = true;
+          if (selectedClassKey === 'mage') {
+            // 🔧 Same fix as above: decide by actual input state, not the isMobile flag.
+            if (mobileAimTipX !== null) {
+              // Reuse the exact same point the aim line just ended at, so the meteor
+              // always lands right at the tip of the line — never a different distance.
+              centerX = mobileAimTipX;
+              centerY = mobileAimTipY;
+            } else if (hasEDir) {
+              centerX = player.x + lastEDirX * METEOR_AIM_RANGE;
+              centerY = player.y + lastEDirY * METEOR_AIM_RANGE;
+            } else if (mobileInput.eActive) {
+              centerX = player.x + Math.cos(player.angle) * METEOR_AIM_RANGE;
+              centerY = player.y + Math.sin(player.angle) * METEOR_AIM_RANGE;
+            } else if (hasRealMouseInput) {
+              centerX = mouse.x;
+              centerY = mouse.y;
+            } else {
+              centerX = player.x + Math.cos(player.angle) * METEOR_AIM_RANGE;
+              centerY = player.y + Math.sin(player.angle) * METEOR_AIM_RANGE;
+            }
+            rad = 120;
+            lastTelegraphX = centerX;
+            lastTelegraphY = centerY;
+          } else if (selectedClassKey === 'paladin') {
+            rad = 110;
+          } else if (selectedClassKey === 'assassin') {
+            showChargeCircle = false;
+          }
+
+          if (showChargeCircle) {
+            ctx.beginPath();
+            ctx.strokeStyle = cls.color;
+            ctx.lineWidth = 3;
+            ctx.setLineDash([6, 8]);
+            ctx.arc(centerX, centerY, rad, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.fillStyle = cls.glow;
+            ctx.arc(centerX, centerY, rad, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        for (const dm of delayedMeteors) {
+          const progress = 1 - (dm.delay / dm.maxDelay);
+          ctx.save();
+          const meteorColor = dm.owner === 'bot' ? 'rgba(255, 110, 110, 0.9)' : '#a970e8';
+          ctx.strokeStyle = meteorColor;
+          ctx.lineWidth = 2;
+          ctx.setLineDash([6, 6]);
           ctx.beginPath();
-          ctx.moveTo(player.x, player.y);
-          ctx.lineTo(targetX, targetY);
+          ctx.arc(dm.x, dm.y, dm.radius, 0, Math.PI * 2);
           ctx.stroke();
           ctx.setLineDash([]);
+          ctx.beginPath();
+          ctx.fillStyle = dm.owner === 'bot' ? 'rgba(255, 110, 110, 0.2)' : 'rgba(169, 112, 232, 0.25)';
+          ctx.arc(dm.x, dm.y, dm.radius * progress, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = dm.owner === 'bot' ? 'rgba(255, 150, 150, 0.85)' : 'rgba(169, 112, 232, 0.6)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(dm.x - 15, dm.y); ctx.lineTo(dm.x + 15, dm.y);
+          ctx.moveTo(dm.x, dm.y - 15); ctx.lineTo(dm.x, dm.y + 15);
+          ctx.stroke();
+          ctx.restore();
+        }
+        for (const a of auras) {
+          const color = a.owner === 'player' ? CLASSES[selectedClassKey].color : CLASSES[bot.classKey].color;
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        for (const p of projectiles) {
+          ctx.save();
+          if (p.type === 'blade') {
+            const angle = Math.atan2(p.vy, p.vx);
+            ctx.translate(p.x, p.y);
+            ctx.rotate(angle);
+            ctx.fillStyle = p.color;
+            ctx.shadowColor = p.color;
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.moveTo(12, 0);
+            ctx.lineTo(-6, -3);
+            ctx.lineTo(-2, 0);
+            ctx.lineTo(-6, 3);
+            ctx.closePath();
+            ctx.fill();
+            if (p.owner === 'bot') { ctx.lineWidth = 2; ctx.strokeStyle = '#ff6b6b'; ctx.stroke(); }
+          } else {
+            ctx.beginPath();
+            ctx.fillStyle = p.color;
+            ctx.shadowColor = p.color;
+            ctx.shadowBlur = 10;
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fill();
+            if (p.owner === 'bot') { ctx.lineWidth = 2; ctx.strokeStyle = '#ff6b6b'; ctx.stroke(); }
+          }
+          ctx.restore();
+        }
+        drawEntity(player);
+        drawEntity(bot);
+        if (startLabelTimer > 0) {
+          const alpha = Math.max(0, startLabelTimer / 2);
+          ctx.save();
+          ctx.font = '700 20px Orbitron, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+          ctx.shadowColor = `rgba(0,0,0,${alpha})`;
+          ctx.shadowBlur = 10;
+          ctx.fillText(startLabelText, player.x, player.y - player.radius - 12);
+          ctx.restore();
         }
       }
-    } else if (player.alive && !isMobile) {
-      ctx.strokeStyle = player.color + '50';
-      ctx.setLineDash([4, 6]);
-      ctx.beginPath();
-      ctx.moveTo(player.x, player.y);
-      ctx.lineTo(mouse.x, mouse.y);
-      ctx.stroke();
-      ctx.setLineDash([]);
+      if (previewMode) return;
+      ctx.textAlign = 'center';
+      ctx.font = '700 18px Orbitron, sans-serif';
+      for (const ft of floatingTexts) {
+        const alpha = Math.max(0, ft.life / ft.maxLife);
+        ctx.fillStyle = ft.color;
+        ctx.globalAlpha = alpha;
+        ctx.shadowColor = '#000000';
+        ctx.shadowBlur = 4;
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1.0;
+      }
     }
-    if (player.eCharging) {
-      const cls = CLASSES[selectedClassKey];
-      let rad = 210, centerX = player.x, centerY = player.y, showChargeCircle = true;
-      if (isMobile && mobileInput.eActive) {
-        const dirLen = Math.hypot(mobileInput.eDirX, mobileInput.eDirY);
-        if (dirLen > 0.3) {
-          if (selectedClassKey === 'mage') { rad = 120; centerX = player.x + mobileInput.eDirX * 300; centerY = player.y + mobileInput.eDirY * 300; }
-        }
-      } else if (selectedClassKey === 'mage') { rad = 120; centerX = mouse.x; centerY = mouse.y; }
-      else if (selectedClassKey === 'paladin') rad = 110;
-      else if (selectedClassKey === 'assassin') showChargeCircle = false;
-      if (showChargeCircle) {
+
+    function drawEntity(e) {
+      if (!e.alive) return;
+      ctx.save();
+      ctx.translate(e.x, e.y);
+      if (e.shieldStacks > 0) {
         ctx.beginPath();
-        ctx.strokeStyle = cls.color;
+        ctx.strokeStyle = '#38bdf8';
         ctx.lineWidth = 3;
-        ctx.setLineDash([6, 8]);
-        ctx.arc(centerX, centerY, rad, 0, Math.PI * 2);
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 14;
+        ctx.arc(0, 0, e.radius + 8, 0, Math.PI * 2);
         ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.beginPath();
-        ctx.fillStyle = cls.glow;
-        ctx.arc(centerX, centerY, rad, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.save();
+        ctx.fillStyle = '#38bdf8';
+        ctx.font = '700 14px Orbitron, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = '#000000';
+        ctx.shadowBlur = 4;
+        ctx.fillText(e.shieldStacks, 0, 0);
+        ctx.restore();
       }
-    }
-    for (const dm of delayedMeteors) {
-      const progress = 1 - (dm.delay / dm.maxDelay);
-      ctx.save();
-      const meteorColor = dm.owner === 'bot' ? 'rgba(255, 110, 110, 0.9)' : '#a970e8';
-      ctx.strokeStyle = meteorColor;
-      ctx.lineWidth = 2;
-      ctx.setLineDash([6, 6]);
+      const mainColor = e.hitFlash > 0 ? '#ffffff' : e.color;
       ctx.beginPath();
-      ctx.arc(dm.x, dm.y, dm.radius, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.beginPath();
-      ctx.fillStyle = dm.owner === 'bot' ? 'rgba(255, 110, 110, 0.2)' : 'rgba(169, 112, 232, 0.25)';
-      ctx.arc(dm.x, dm.y, dm.radius * progress, 0, Math.PI * 2);
+      ctx.fillStyle = mainColor;
+      ctx.shadowColor = e.glow;
+      ctx.shadowBlur = 18;
+      ctx.arc(0, 0, e.radius, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = dm.owner === 'bot' ? 'rgba(255, 150, 150, 0.85)' : 'rgba(169, 112, 232, 0.6)';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(dm.x - 15, dm.y); ctx.lineTo(dm.x + 15, dm.y);
-      ctx.moveTo(dm.x, dm.y - 15); ctx.lineTo(dm.x, dm.y + 15);
+      ctx.shadowBlur = 0;
+      if (e === bot) { ctx.lineWidth = 4; ctx.strokeStyle = '#ff6b6b'; }
+      else { ctx.lineWidth = 2; ctx.strokeStyle = '#0a0e14'; }
       ctx.stroke();
-      ctx.restore();
-    }
-    for (const a of auras) {
-      const color = a.owner === 'player' ? CLASSES[selectedClassKey].color : CLASSES[bot.classKey].color;
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-    for (const p of projectiles) {
-      ctx.save();
-      if (p.type === 'blade') {
-        const angle = Math.atan2(p.vy, p.vx);
-        ctx.translate(p.x, p.y);
-        ctx.rotate(angle);
-        ctx.fillStyle = p.color;
-        ctx.shadowColor = p.color;
-        ctx.shadowBlur = 10;
+      ctx.rotate(e.angle);
+      ctx.strokeStyle = mainColor;
+      ctx.fillStyle = mainColor;
+      if (e.classKey === 'striker') {
         ctx.beginPath();
-        ctx.moveTo(12, 0);
-        ctx.lineTo(-6, -3);
-        ctx.lineTo(-2, 0);
-        ctx.lineTo(-6, 3);
+        ctx.lineWidth = 2;
+        ctx.arc(0, 0, e.radius + 4, -Math.PI / 3, Math.PI / 3);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(e.radius + 6, 0);
+        ctx.lineTo(e.radius - 2, -5);
+        ctx.lineTo(e.radius - 2, 5);
         ctx.closePath();
         ctx.fill();
-        if (p.owner === 'bot') { ctx.lineWidth = 2; ctx.strokeStyle = '#ff6b6b'; ctx.stroke(); }
-      } else {
+      } else if (e.classKey === 'mage') {
+        ctx.save();
+        ctx.rotate(now_ms() * 0.002);
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.fillStyle = p.color;
-        ctx.shadowColor = p.color;
-        ctx.shadowBlur = 10;
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        for (let i = 0; i < 3; i++) {
+          const a = (i * Math.PI * 2) / 3;
+          const rx = Math.cos(a) * (e.radius + 5);
+          const ry = Math.sin(a) * (e.radius + 5);
+          ctx.moveTo(rx, ry);
+          ctx.arc(rx, ry, 2, 0, Math.PI * 2);
+        }
+        ctx.stroke();
+        ctx.restore();
+        ctx.beginPath();
+        ctx.arc(0, 0, 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
         ctx.fill();
-        if (p.owner === 'bot') { ctx.lineWidth = 2; ctx.strokeStyle = '#ff6b6b'; ctx.stroke(); }
+      } else if (e.classKey === 'assassin') {
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-e.radius - 2, 0); ctx.lineTo(e.radius + 2, 0);
+        ctx.moveTo(0, -e.radius - 2); ctx.lineTo(0, e.radius + 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(e.radius + 5, 0);
+        ctx.lineTo(e.radius, -3);
+        ctx.lineTo(e.radius, 3);
+        ctx.closePath();
+        ctx.fill();
+      } else if (e.classKey === 'paladin') {
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(0, 0, e.radius + 5, -Math.PI / 2.5, Math.PI / 2.5);
+        ctx.stroke();
       }
       ctx.restore();
     }
-    drawEntity(player);
-    drawEntity(bot);
-    if (startLabelTimer > 0) {
-      const alpha = Math.max(0, startLabelTimer / 2);
-      ctx.save();
-      ctx.font = '700 20px Orbitron, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'bottom';
-      ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-      ctx.shadowColor = `rgba(0,0,0,${alpha})`;
-      ctx.shadowBlur = 10;
-      ctx.fillText(startLabelText, player.x, player.y - player.radius - 12);
-      ctx.restore();
-    }
-  }
-  if (previewMode) return;
-  ctx.textAlign = 'center';
-  ctx.font = '700 18px Orbitron, sans-serif';
-  for (const ft of floatingTexts) {
-    const alpha = Math.max(0, ft.life / ft.maxLife);
-    ctx.fillStyle = ft.color;
-    ctx.globalAlpha = alpha;
-    ctx.shadowColor = '#000000';
-    ctx.shadowBlur = 4;
-    ctx.fillText(ft.text, ft.x, ft.y);
-    ctx.shadowBlur = 0;
-    ctx.globalAlpha = 1.0;
-  }
-}
 
-function drawEntity(e) {
-  if (!e.alive) return;
-  ctx.save();
-  ctx.translate(e.x, e.y);
-  if (e.shieldStacks > 0) {
-    ctx.beginPath();
-    ctx.strokeStyle = '#38bdf8';
-    ctx.lineWidth = 3;
-    ctx.shadowColor = '#38bdf8';
-    ctx.shadowBlur = 14;
-    ctx.arc(0, 0, e.radius + 8, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-    ctx.save();
-    ctx.fillStyle = '#38bdf8';
-    ctx.font = '700 14px Orbitron, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.shadowColor = '#000000';
-    ctx.shadowBlur = 4;
-    ctx.fillText(e.shieldStacks, 0, 0);
-    ctx.restore();
-  }
-  const mainColor = e.hitFlash > 0 ? '#ffffff' : e.color;
-  ctx.beginPath();
-  ctx.fillStyle = mainColor;
-  ctx.shadowColor = e.glow;
-  ctx.shadowBlur = 18;
-  ctx.arc(0, 0, e.radius, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.shadowBlur = 0;
-  if (e === bot) { ctx.lineWidth = 4; ctx.strokeStyle = '#ff6b6b'; }
-  else { ctx.lineWidth = 2; ctx.strokeStyle = '#0a0e14'; }
-  ctx.stroke();
-  ctx.rotate(e.angle);
-  ctx.strokeStyle = mainColor;
-  ctx.fillStyle = mainColor;
-  if (e.classKey === 'striker') {
-    ctx.beginPath();
-    ctx.lineWidth = 2;
-    ctx.arc(0, 0, e.radius + 4, -Math.PI / 3, Math.PI / 3);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(e.radius + 6, 0);
-    ctx.lineTo(e.radius - 2, -5);
-    ctx.lineTo(e.radius - 2, 5);
-    ctx.closePath();
-    ctx.fill();
-  } else if (e.classKey === 'mage') {
-    ctx.save();
-    ctx.rotate(now_ms() * 0.002);
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    for (let i = 0; i < 3; i++) {
-      const a = (i * Math.PI * 2) / 3;
-      const rx = Math.cos(a) * (e.radius + 5);
-      const ry = Math.sin(a) * (e.radius + 5);
-      ctx.moveTo(rx, ry);
-      ctx.arc(rx, ry, 2, 0, Math.PI * 2);
-    }
-    ctx.stroke();
-    ctx.restore();
-    ctx.beginPath();
-    ctx.arc(0, 0, 4, 0, Math.PI * 2);
-    ctx.fillStyle = '#ffffff';
-    ctx.fill();
-  } else if (e.classKey === 'assassin') {
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(-e.radius - 2, 0); ctx.lineTo(e.radius + 2, 0);
-    ctx.moveTo(0, -e.radius - 2); ctx.lineTo(0, e.radius + 2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(e.radius + 5, 0);
-    ctx.lineTo(e.radius, -3);
-    ctx.lineTo(e.radius, 3);
-    ctx.closePath();
-    ctx.fill();
-  } else if (e.classKey === 'paladin') {
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.arc(0, 0, e.radius + 5, -Math.PI / 2.5, Math.PI / 2.5);
-    ctx.stroke();
-  }
-  ctx.restore();
-}
-
-applyLanguage(currentLang);
-requestAnimationFrame(loop);
-</script>
+    applyLanguage(currentLang);
+    requestAnimationFrame(loop);
+  </script>
 </body>
+
 </html>
